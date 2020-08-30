@@ -27,12 +27,14 @@ namespace mapping {
 struct YawOnlyQuaternionPlus {
   template <typename T>
   bool operator()(const T* x, const T* delta, T* x_plus_delta) const {
+      ///common::Clamp(a,min,max) 将a的值限定在min,max范围内
     const T clamped_delta = common::Clamp(delta[0], T(-0.5), T(0.5));
     T q_delta[4];
     q_delta[0] = ceres::sqrt(1. - clamped_delta * clamped_delta);
     q_delta[1] = T(0.);
     q_delta[2] = T(0.);
     q_delta[3] = clamped_delta;
+    ///q_delta*x = x_plus_delta
     ceres::QuaternionProduct(q_delta, x, x_plus_delta);
     return true;
   }

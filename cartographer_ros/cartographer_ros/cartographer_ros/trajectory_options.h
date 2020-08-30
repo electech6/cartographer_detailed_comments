@@ -24,7 +24,7 @@
 #include "cartographer/mapping/proto/trajectory_builder_options.pb.h"
 
 namespace cartographer_ros {
-
+//轨迹选项的结构体
 struct TrajectoryOptions {
   ::cartographer::mapping::proto::TrajectoryBuilderOptions
       trajectory_builder_options;

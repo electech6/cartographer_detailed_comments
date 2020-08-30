@@ -31,6 +31,9 @@ namespace common {
 
 // Resolves file paths and file content for the Lua 'read' and 'include'
 // functions. Use this to configure where those functions load other files from.
+/**
+ * @brief 为Lua的“读取”和“包含”功能解析文件路径和文件内容。 使用它来配置这些功能从何处加载其他文件。
+ */
 class FileResolver {
  public:
   virtual ~FileResolver() {}

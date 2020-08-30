@@ -56,12 +56,16 @@ inline uint8 ProbabilityToLogOddsInteger(const float probability) {
 // track of how many range data were inserted into it, and sets
 // 'insertion_finished' when the map no longer changes and is ready for loop
 // closing.
+/**
+ * @brief 子图类
+ */
 class Submap {
  public:
+ //构造函数，只包括一个 local_pose
   Submap(const transform::Rigid3d& local_submap_pose)
       : local_pose_(local_submap_pose) {}
   virtual ~Submap() {}
-
+   //序列化与反序列化
   virtual proto::Submap ToProto(bool include_grid_data) const = 0;
   virtual void UpdateFromProto(const proto::Submap& proto) = 0;
 
@@ -71,14 +75,17 @@ class Submap {
       proto::SubmapQuery::Response* response) const = 0;
 
   // Pose of this submap in the local map frame.
+  // 返回成员变量 local_pose_，即该 submap 的位姿
   transform::Rigid3d local_pose() const { return local_pose_; }
 
   // Number of RangeData inserted.
+  //返回插入点云的数量
   int num_range_data() const { return num_range_data_; }
+  //设置点云的数量
   void set_num_range_data(const int num_range_data) {
     num_range_data_ = num_range_data;
   }
-
+  // 查看布尔型成员变量 finished_，即该子图是否还需要更新
   bool insertion_finished() const { return insertion_finished_; }
   void set_insertion_finished(bool insertion_finished) {
     insertion_finished_ = insertion_finished;

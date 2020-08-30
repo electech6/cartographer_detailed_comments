@@ -21,7 +21,7 @@
 #include "cartographer_ros/ros_log_sink.h"
 #include "gflags/gflags.h"
 #include "tf2_ros/transform_listener.h"
-
+// 定义几个string变量，第二个参数是初始值, 后面根据输入赋具体值
 DEFINE_bool(collect_metrics, false,
             "Activates the collection of runtime metrics. If activated, the "
             "metrics can be accessed via a ROS service.");
@@ -49,15 +49,22 @@ namespace {
 
 void Run() {
   constexpr double kTfBufferCacheTimeInSeconds = 10.;
-  tf2_ros::Buffer tf_buffer{::ros::Duration(kTfBufferCacheTimeInSeconds)};
-  tf2_ros::TransformListener tf(tf_buffer);
+  tf2_ros::Buffer tf_buffer{::ros::Duration(kTfBufferCacheTimeInSeconds)}; //设置tf缓存时间
+  tf2_ros::TransformListener tf(tf_buffer); // tf监听器
   NodeOptions node_options;
   TrajectoryOptions trajectory_options;
+    /**
+     * @brief LoadOptions在node_Options.cc中实现，
+     * @brief 实际分别调用了node_options和 trajectory_options的create函数，返回一个options
+     * @brief 将 LoadOptions 获取到的参数值分别赋给 node_options 和 trajectory_options
+     * @brief 只能接收元组的赋值
+     */
   std::tie(node_options, trajectory_options) =
       LoadOptions(FLAGS_configuration_directory, FLAGS_configuration_basename);
 
   auto map_builder = absl::make_unique<cartographer::mapping::MapBuilder>(
       node_options.map_builder_options);
+  // 这里用mapping::MapBuilder作为Node构造函数的参数,定义里是mapping::MapBuilderInterface
   Node node(node_options, std::move(map_builder), &tf_buffer,
             FLAGS_collect_metrics);
   if (!FLAGS_load_state_filename.empty()) {
@@ -83,6 +90,9 @@ void Run() {
 }  // namespace cartographer_ros
 
 int main(int argc, char** argv) {
+    /**
+     * @brief 定义命令行启动程序的参数设置
+     */
   google::InitGoogleLogging(argv[0]);
   google::ParseCommandLineFlags(&argc, &argv, true);
 
@@ -90,10 +100,10 @@ int main(int argc, char** argv) {
       << "-configuration_directory is missing.";
   CHECK(!FLAGS_configuration_basename.empty())
       << "-configuration_basename is missing.";
-
+  // cartographer_ros是个package,包含多个节点node,首先初始化cartographer_node
   ::ros::init(argc, argv, "cartographer_node");
   ::ros::start();
-
+  // 打印日志相关
   cartographer_ros::ScopedRosLogSink ros_log_sink;
   cartographer_ros::Run();
   ::ros::shutdown();

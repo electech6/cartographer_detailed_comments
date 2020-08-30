@@ -36,13 +36,20 @@ proto::MotionFilterOptions CreateMotionFilterOptions(
 
 MotionFilter::MotionFilter(const proto::MotionFilterOptions& options)
     : options_(options) {}
-
+/**
+ * @brief 该函数根据预先设置的阈值，如果累积运动超过提前预设的阈值，则返回 false； 否则返回 true：
+ * @param[in] time 
+ * @param[in] pose 
+ * @return true 
+ * @return false 
+ */
 bool MotionFilter::IsSimilar(const common::Time time,
                              const transform::Rigid3d& pose) {
   LOG_IF_EVERY_N(INFO, num_total_ >= 500, 500)
       << "Motion filter reduced the number of nodes to "
       << 100. * num_different_ / num_total_ << "%.";
   ++num_total_;
+  ///总帧数>1 时间差<=时间间隔阈值 平移位姿<=平移阈值 旋转差距<=旋转阈值
   if (num_total_ > 1 &&
       time - last_time_ <= common::FromSeconds(options_.max_time_seconds()) &&
       (pose.translation() - last_pose_.translation()).norm() <=

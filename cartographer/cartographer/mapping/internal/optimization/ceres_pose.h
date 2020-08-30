@@ -44,6 +44,8 @@ class CeresPose {
   double* rotation() { return data_->rotation.data(); }
   const double* rotation() const { return data_->rotation.data(); }
 
+  ///std::array<类型,个数> 构造固定大小的数组
+  ///欧式变换结构体 平移 四元数旋转
   struct Data {
     std::array<double, 3> translation;
     // Rotation quaternion as (w, x, y, z).
@@ -53,7 +55,7 @@ class CeresPose {
   Data& data() { return *data_; }
 
  private:
-  std::shared_ptr<Data> data_;
+  std::shared_ptr<Data> data_; ///一个欧式变换
 };
 
 CeresPose::Data FromPose(const transform::Rigid3d& pose);

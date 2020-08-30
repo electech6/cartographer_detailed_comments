@@ -29,9 +29,13 @@
 
 namespace cartographer {
 namespace common {
-
+//有元类之前先需定义
 class Task;
-
+/**
+ * @brief 是对c++11 thread的封装，线程数量固定的线程池类
+ * 构造函数 ThreadPoolInterface
+ * 成员函数 Schedule
+ */
 class ThreadPoolInterface {
  public:
   ThreadPoolInterface() {}
@@ -43,6 +47,7 @@ class ThreadPoolInterface {
   void SetThreadPool(Task* task);
 
  private:
+ //定义有元类
   friend class Task;
 
   virtual void NotifyDependenciesCompleted(Task* task) = 0;
@@ -54,8 +59,13 @@ class ThreadPoolInterface {
 // in a background thread. The queue must be empty before calling the
 // destructor. The thread pool will then wait for the currently executing work
 // items to finish and then destroy the threads.
+/**
+ * @brief ThreadPoolInterface的子类，多了成员函数 DoWork()
+ * 多的成员变量 mutex_、running_、pool_、task_queue_、tasks_not_ready_
+ */
 class ThreadPool : public ThreadPoolInterface {
  public:
+ //初始化一个线程数量固定的线程池
   explicit ThreadPool(int num_threads);
   ~ThreadPool();
 
@@ -71,11 +81,12 @@ class ThreadPool : public ThreadPoolInterface {
   void DoWork();
 
   void NotifyDependenciesCompleted(Task* task) LOCKS_EXCLUDED(mutex_) override;
-
+  //定义互斥量
   absl::Mutex mutex_;
   bool running_ GUARDED_BY(mutex_) = true;
   std::vector<std::thread> pool_ GUARDED_BY(mutex_);
   std::deque<std::shared_ptr<Task>> task_queue_ GUARDED_BY(mutex_);
+  //创建map的容器
   absl::flat_hash_map<Task*, std::shared_ptr<Task>> tasks_not_ready_
       GUARDED_BY(mutex_);
 };

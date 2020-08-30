@@ -71,11 +71,19 @@ ConstraintBuilder2D::~ConstraintBuilder2D() {
   CHECK_EQ(num_started_nodes_, num_finished_nodes_);
   CHECK(when_done_ == nullptr);
 }
-
+/**
+ * @brief 计算节点和子图之间的约束,本函数计算约束需要有一个初始位姿.因此必须在同一个轨迹上才能满足.
+ * @param[in] submap_id 
+ * @param[in] submap 
+ * @param[in] node_id 
+ * @param[in] constant_data 
+ * @param[in] initial_relative_pose 
+ */
 void ConstraintBuilder2D::MaybeAddConstraint(
     const SubmapId& submap_id, const Submap2D* const submap,
     const NodeId& node_id, const TrajectoryNode::Data* const constant_data,
     const transform::Rigid2d& initial_relative_pose) {
+  //超过搜索框的大小,则不进行搜索.
   if (initial_relative_pose.translation().norm() >
       options_.max_constraint_distance()) {
     return;
@@ -90,9 +98,12 @@ void ConstraintBuilder2D::MaybeAddConstraint(
   constraints_.emplace_back();
   kQueueLengthMetric->Set(constraints_.size());
   auto* const constraint = &constraints_.back();
+  //子图对应的fast scan-matcher.进行分支定界
   const auto* scan_matcher =
       DispatchScanMatcherConstruction(submap_id, submap->grid());
+  //进行约束计算,
   auto constraint_task = absl::make_unique<common::Task>();
+  //线程池的调度.
   constraint_task->SetWorkItem([=]() LOCKS_EXCLUDED(mutex_) {
     ComputeConstraint(submap_id, submap, node_id, false, /* match_full_submap */
                       constant_data, initial_relative_pose, *scan_matcher,
@@ -103,7 +114,14 @@ void ConstraintBuilder2D::MaybeAddConstraint(
       thread_pool_->Schedule(std::move(constraint_task));
   finish_node_task_->AddDependency(constraint_task_handle);
 }
-
+/**
+ * @brief 进行节点和子图之间的约束的计算,本次函数是全局匹配,不需要初始位姿.因此位姿设置为(0,0,0)
+ * 同时也不要求在同一个trajectory上.
+ * @param[in] submap_id 
+ * @param[in] submap 
+ * @param[in] node_id 
+ * @param[in] constant_data 
+ */
 void ConstraintBuilder2D::MaybeAddGlobalConstraint(
     const SubmapId& submap_id, const Submap2D* const submap,
     const NodeId& node_id, const TrajectoryNode::Data* const constant_data) {
@@ -115,9 +133,12 @@ void ConstraintBuilder2D::MaybeAddGlobalConstraint(
   constraints_.emplace_back();
   kQueueLengthMetric->Set(constraints_.size());
   auto* const constraint = &constraints_.back();
+  //得到子图对应的scan-matcher.
   const auto* scan_matcher =
       DispatchScanMatcherConstruction(submap_id, submap->grid());
+  //进行约束计算.
   auto constraint_task = absl::make_unique<common::Task>();
+  //放入线程池中调用.
   constraint_task->SetWorkItem([=]() LOCKS_EXCLUDED(mutex_) {
     ComputeConstraint(submap_id, submap, node_id, true, /* match_full_submap */
                       constant_data, transform::Rigid2d::Identity(),
@@ -176,7 +197,17 @@ ConstraintBuilder2D::DispatchScanMatcherConstruction(const SubmapId& submap_id,
       thread_pool_->Schedule(std::move(scan_matcher_task));
   return &submap_scan_matchers_.at(submap_id);
 }
-
+/**
+ * @brief 计算节点和子图之间的位姿关系.用fast csm来进行匹配,然后用csm来进行优化.
+ * @param[in] submap_id 
+ * @param[in] submap 
+ * @param[in] node_id 
+ * @param[in] match_full_submap 
+ * @param[in] constant_data 
+ * @param[in] initial_relative_pose 
+ * @param[in] submap_scan_matcher 
+ * @param[in] constraint 
+ */
 void ConstraintBuilder2D::ComputeConstraint(
     const SubmapId& submap_id, const Submap2D* const submap,
     const NodeId& node_id, bool match_full_submap,
@@ -185,6 +216,7 @@ void ConstraintBuilder2D::ComputeConstraint(
     const SubmapScanMatcher& submap_scan_matcher,
     std::unique_ptr<ConstraintBuilder2D::Constraint>* constraint) {
   CHECK(submap_scan_matcher.fast_correlative_scan_matcher);
+  //匹配的初始位姿.
   const transform::Rigid2d initial_pose =
       ComputeSubmapPose(*submap) * initial_relative_pose;
 
@@ -193,7 +225,9 @@ void ConstraintBuilder2D::ComputeConstraint(
   // - the initial guess 'initial_pose' for (map <- node j),
   // - the result 'pose_estimate' of Match() (map <- node j).
   // - the ComputeSubmapPose() (map <- submap i)
+  // 节点j到子图i之间的约束关系:
   float score = 0.;
+  //初始位姿
   transform::Rigid2d pose_estimate = transform::Rigid2d::Identity();
 
   // Compute 'pose_estimate' in three stages:
@@ -202,6 +236,7 @@ void ConstraintBuilder2D::ComputeConstraint(
   // 3. Refine.
   if (match_full_submap) {
     kGlobalConstraintsSearchedMetric->Increment();
+    //进行无初始位姿fast csm匹配.即全局匹配.
     if (submap_scan_matcher.fast_correlative_scan_matcher->MatchFullSubmap(
             constant_data->filtered_gravity_aligned_point_cloud,
             options_.global_localization_min_score(), &score, &pose_estimate)) {
@@ -234,14 +269,16 @@ void ConstraintBuilder2D::ComputeConstraint(
   // Use the CSM estimate as both the initial and previous pose. This has the
   // effect that, in the absence of better information, we prefer the original
   // CSM estimate.
+  // 进行ceres-scan-match优化.
   ceres::Solver::Summary unused_summary;
   ceres_scan_matcher_.Match(pose_estimate.translation(), pose_estimate,
                             constant_data->filtered_gravity_aligned_point_cloud,
                             *submap_scan_matcher.grid, &pose_estimate,
                             &unused_summary);
-
+  //计算得到的约束.
   const transform::Rigid2d constraint_transform =
       ComputeSubmapPose(*submap).inverse() * pose_estimate;
+   //根据计算的位姿,重新设置约束的值.
   constraint->reset(new Constraint{submap_id,
                                    node_id,
                                    {transform::Embed3D(constraint_transform),
@@ -267,7 +304,9 @@ void ConstraintBuilder2D::ComputeConstraint(
     LOG(INFO) << info.str();
   }
 }
-
+/**
+ * @brief 约束计算完成之后的回调函数.
+ */
 void ConstraintBuilder2D::RunWhenDoneCallback() {
   Result result;
   std::unique_ptr<std::function<void(const Result&)>> callback;

@@ -58,6 +58,7 @@ transform::Rigid2d ToPose(const std::array<double, 3>& values) {
 
 // Selects a trajectory node closest in time to the landmark observation and
 // applies a relative transform from it.
+// 得到landmark的初始位姿.
 transform::Rigid3d GetInitialLandmarkPose(
     const LandmarkNode::LandmarkObservation& observation,
     const NodeSpec2D& prev_node, const NodeSpec2D& next_node,

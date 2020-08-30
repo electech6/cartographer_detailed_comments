@@ -34,6 +34,7 @@ void TrajectoryCollator::AddTrajectory(
     const auto queue_key = QueueKey{trajectory_id, sensor_id};
     trajectory_to_queue_[trajectory_id].AddQueue(
         queue_key, [callback, sensor_id](std::unique_ptr<Data> data) {
+          //callback 即为被传入的回调函数
           callback(sensor_id, std::move(data));
         });
     trajectory_to_queue_keys_[trajectory_id].push_back(queue_key);

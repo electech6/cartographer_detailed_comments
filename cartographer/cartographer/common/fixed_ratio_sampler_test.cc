@@ -21,10 +21,14 @@
 namespace cartographer {
 namespace common {
 namespace {
-
+/**
+ * @brief Construct a new TEST object 
+ */
 TEST(FixedRatioSamplerTest, AlwaysTrue) {
+  //ratio=1.0
   FixedRatioSampler fixed_ratio_sampler(1.);
   for (int i = 0; i < 100; ++i) {
+    //测试ture的情况
     EXPECT_TRUE(fixed_ratio_sampler.Pulse());
   }
 }

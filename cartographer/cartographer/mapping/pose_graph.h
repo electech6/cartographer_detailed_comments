@@ -40,13 +40,14 @@
 
 namespace cartographer {
 namespace mapping {
-
+//创建配置项
 proto::PoseGraphOptions CreatePoseGraphOptions(
     common::LuaParameterDictionary* const parameter_dictionary);
 
 class PoseGraph : public PoseGraphInterface {
  public:
   struct InitialTrajectoryPose {
+    //应该关联到那个 trajectory_id
     int to_trajectory_id;
     transform::Rigid3d relative_pose;
     common::Time time;
@@ -116,7 +117,7 @@ class PoseGraph : public PoseGraphInterface {
   // 'submap_id'. Returns 'nullptr' for the 'submap' member if the submap does
   // not exist (anymore).
   virtual SubmapData GetSubmapData(const SubmapId& submap_id) const = 0;
-
+  //序列化
   proto::PoseGraph ToProto(bool include_unfinished_submaps) const override;
 
   // Returns the IMU data.
@@ -145,6 +146,7 @@ std::vector<PoseGraph::Constraint> FromProto(
     const ::google::protobuf::RepeatedPtrField<
         ::cartographer::mapping::proto::PoseGraph::Constraint>&
         constraint_protos);
+//约束序列化
 proto::PoseGraph::Constraint ToProto(const PoseGraph::Constraint& constraint);
 
 }  // namespace mapping

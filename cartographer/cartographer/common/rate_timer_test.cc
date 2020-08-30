@@ -21,17 +21,25 @@
 namespace cartographer {
 namespace common {
 namespace {
-
+/**
+ * @brief Construct a new TEST object
+ */
 TEST(RateTimerTest, ComputeRate) {
+  //设置1s的时间段
   RateTimer<> rate_timer(common::FromSeconds(1.));
+  //42s的时间点
   common::Time time = common::FromUniversal(42);
+  
   for (int i = 0; i < 100; ++i) {
     rate_timer.Pulse(time);
     time += common::FromSeconds(0.1);
   }
+  // 频率应该等于10hz
   EXPECT_NEAR(10., rate_timer.ComputeRate(), 1e-3);
 }
-
+/**
+ * @brief 模拟的时间clock类
+ */
 struct SimulatedClock {
   using rep = std::chrono::steady_clock::rep;
   using period = std::chrono::steady_clock::period;
@@ -39,6 +47,7 @@ struct SimulatedClock {
   using time_point = std::chrono::steady_clock::time_point;
 
   static time_point time;
+  // 不会抛出异常
   static time_point now() noexcept { return time; }
 };
 

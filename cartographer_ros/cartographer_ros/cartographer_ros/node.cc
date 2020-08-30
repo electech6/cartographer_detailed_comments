@@ -113,6 +113,9 @@ Node::Node(
   constraint_list_publisher_ =
       node_handle_.advertise<::visualization_msgs::MarkerArray>(
           kConstraintListTopic, kLatestOnlyPublisherQueueSize);
+  /**
+   * @brief server对request作出response,根据ServiceName调用具体的函数句柄处理
+   */
   service_servers_.push_back(node_handle_.advertiseService(
       kSubmapQueryServiceName, &Node::HandleSubmapQuery, this));
   service_servers_.push_back(node_handle_.advertiseService(
@@ -127,7 +130,7 @@ Node::Node(
       kGetTrajectoryStatesServiceName, &Node::HandleGetTrajectoryStates, this));
   service_servers_.push_back(node_handle_.advertiseService(
       kReadMetricsServiceName, &Node::HandleReadMetrics, this));
-
+  // 匹配上的点云
   scan_matched_point_cloud_publisher_ =
       node_handle_.advertise<sensor_msgs::PointCloud2>(
           kScanMatchedPointCloudTopic, kLatestOnlyPublisherQueueSize);
@@ -150,11 +153,23 @@ Node::Node(
       ::ros::WallDuration(kConstraintPublishPeriodSec),
       &Node::PublishConstraintList, this));
 }
-
+/**
+ * @brief 析构函数在Node销毁前调用FinishAllTrajectories()
+ */
 Node::~Node() { FinishAllTrajectories(); }
 
+/**
+ * @brief 在Node中对调用::ros::NodeHandle*又进行了一次封装,用在offline_node中
+ * @return node_handle_: ros::NodeHandle类型的指针
+ */
 ::ros::NodeHandle* Node::node_handle() { return &node_handle_; }
 
+/**
+ * @brief service的实际处理是调用map_builder_bridge_的HandleSubmapQuery()
+ * @param request
+ * @param response
+ * @return
+ */
 bool Node::HandleSubmapQuery(
     ::cartographer_ros_msgs::SubmapQuery::Request& request,
     ::cartographer_ros_msgs::SubmapQuery::Response& response) {
@@ -184,7 +199,11 @@ void Node::PublishSubmapList(const ::ros::WallTimerEvent& unused_timer_event) {
   absl::MutexLock lock(&mutex_);
   submap_list_publisher_.publish(map_builder_bridge_.GetSubmapList());
 }
-
+/**
+ * @brief 位姿估计,调用::cartographer::mapping::PoseExtrapolator
+ * @param trajectory_id
+ * @param options
+ */
 void Node::AddExtrapolator(const int trajectory_id,
                            const TrajectoryOptions& options) {
   constexpr double kExtrapolationEstimationTimeSec = 0.001;  // 1 ms
@@ -195,13 +214,18 @@ void Node::AddExtrapolator(const int trajectory_id,
                 .imu_gravity_time_constant()
           : options.trajectory_builder_options.trajectory_builder_2d_options()
                 .imu_gravity_time_constant();
+  // 为了不创建临时副本,同时piecewise_construct解决map类传值分不清key和value的问题
   extrapolators_.emplace(
       std::piecewise_construct, std::forward_as_tuple(trajectory_id),
       std::forward_as_tuple(
           ::cartographer::common::FromSeconds(kExtrapolationEstimationTimeSec),
           gravity_time_constant));
 }
-
+/**
+ * @brief 各个传感器的采样速率
+ * @param trajectory_id
+ * @param options
+ */
 void Node::AddSensorSamplers(const int trajectory_id,
                              const TrajectoryOptions& options) {
   CHECK(sensor_samplers_.count(trajectory_id) == 0);
@@ -212,7 +236,11 @@ void Node::AddSensorSamplers(const int trajectory_id,
           options.fixed_frame_pose_sampling_ratio, options.imu_sampling_ratio,
           options.landmarks_sampling_ratio));
 }
-
+/**
+ * @brief 四个publisher,调用map_builder_bridge_的getXXX()函数处理
+ * @brief Node,Landmark,Constraint的发布函数比较简单,PublishTrajectoryStates非常重要
+ * @param timer_event
+ */
 void Node::PublishLocalTrajectoryData(const ::ros::TimerEvent& timer_event) {
   absl::MutexLock lock(&mutex_);
   for (const auto& entry : map_builder_bridge_.GetLocalTrajectoryData()) {
@@ -327,7 +355,12 @@ void Node::PublishConstraintList(
     constraint_list_publisher_.publish(map_builder_bridge_.GetConstraintList());
   }
 }
-
+/**
+ * @brief 根据输入的sensor类型和数量,计算出唯一有效的topic name
+ * @param options
+ * @param topics
+ * @return a set of SensorID
+ */
 std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>
 Node::ComputeExpectedSensorIds(const TrajectoryOptions& options) const {
   using SensorId = cartographer::mapping::TrajectoryBuilderInterface::SensorId;
@@ -370,6 +403,13 @@ Node::ComputeExpectedSensorIds(const TrajectoryOptions& options) const {
   return expected_topics;
 }
 
+/**
+ * @brief 与start trajectory相关的函数实际调用此函数进行处理,该函数指向map_builder_bridge_
+ * @brief trajectory是上层概念,所以还调用了AddExtrapolator,LaunchSubscribers,AddSensorSamplers等
+ * @param options
+ * @param topics
+ * @return
+ */
 int Node::AddTrajectory(const TrajectoryOptions& options) {
   const std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>
       expected_sensor_ids = ComputeExpectedSensorIds(options);
@@ -386,7 +426,14 @@ int Node::AddTrajectory(const TrajectoryOptions& options) {
   }
   return trajectory_id;
 }
-
+/**
+ * @brief 对多个重复topic，自动加"_"和数字保证唯一。
+ * @brief 调用SubscribeWithHandler实际处理sensor数据
+ * @brief 对于SensorBridge中的多个HandleXXXMessage,需要在node.cc中调用此函数才执行
+ * @param options
+ * @param topics
+ * @param trajectory_id
+ */
 void Node::LaunchSubscribers(const TrajectoryOptions& options,
                              const int trajectory_id) {
   for (const std::string& topic :
@@ -450,6 +497,7 @@ void Node::LaunchSubscribers(const TrajectoryOptions& options,
   }
 }
 
+// 看在lua里面给了2D还是3D的设置
 bool Node::ValidateTrajectoryOptions(const TrajectoryOptions& options) {
   if (node_options_.map_builder_options.use_trajectory_builder_2d()) {
     return options.trajectory_builder_options
@@ -533,6 +581,12 @@ cartographer_ros_msgs::StatusResponse Node::FinishTrajectoryUnderLock(
   return status_response;
 }
 
+/**
+ * @brief 调用AddTrajectory实际处理
+ * @param request
+ * @param response
+ * @return
+ */
 bool Node::HandleStartTrajectory(
     ::cartographer_ros_msgs::StartTrajectory::Request& request,
     ::cartographer_ros_msgs::StartTrajectory::Response& response) {
@@ -590,12 +644,20 @@ bool Node::HandleStartTrajectory(
   return true;
 }
 
+/**
+ * @brief 直接在node_main.cc中调用,函数中继续调用AddTrajectory处理,采用默认传感器话题
+ * @param options
+ */
 void Node::StartTrajectoryWithDefaultTopics(const TrajectoryOptions& options) {
   absl::MutexLock lock(&mutex_);
   CHECK(ValidateTrajectoryOptions(options));
   AddTrajectory(options);
 }
-
+/**
+ * @brief 同时处理多个bag包,offline_node.cc
+ * @param bags_options
+ * @return
+ */
 std::vector<
     std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>>
 Node::ComputeDefaultSensorIdsForMultipleBags(
@@ -667,7 +729,12 @@ bool Node::HandleFinishTrajectory(
   response.status = FinishTrajectoryUnderLock(request.trajectory_id);
   return true;
 }
-
+/**
+ * @brief service的实际处理是调用map_builder_bridge_的SerializeState保存地图
+ * @param request
+ * @param response
+ * @return
+ */
 bool Node::HandleWriteState(
     ::cartographer_ros_msgs::WriteState::Request& request,
     ::cartographer_ros_msgs::WriteState::Response& response) {
@@ -712,12 +779,20 @@ void Node::FinishAllTrajectories() {
   }
 }
 
+/**
+ * @brief 调用FinishTrajectoryUnderLock结束所有轨迹
+ * @brief 注意区别FinishTrajectory(特定轨迹)
+ */
 bool Node::FinishTrajectory(const int trajectory_id) {
   absl::MutexLock lock(&mutex_);
   return FinishTrajectoryUnderLock(trajectory_id).code ==
          cartographer_ros_msgs::StatusCode::OK;
 }
 
+/**
+ * @brief 直接在node_main.cc调用,继续调用map_builder_bridge_的RunFinalOptimization()
+ * @brief 结束程序前最后优化一次所有轨迹优化
+ */
 void Node::RunFinalOptimization() {
   {
     for (const auto& entry : map_builder_bridge_.GetTrajectoryStates()) {
@@ -738,6 +813,13 @@ void Node::RunFinalOptimization() {
   map_builder_bridge_.RunFinalOptimization();
 }
 
+/**
+ * @brief 以下七个HandleXXXMessage()函数,定义了所有传感器数据处理的接口
+ * @brief 是一层封装,实际是调用了MapBuilderBridge,又调用其中的SensorBridge
+ * @param trajectory_id
+ * @param sensor_id
+ * @param msg
+ */
 void Node::HandleOdometryMessage(const int trajectory_id,
                                  const std::string& sensor_id,
                                  const nav_msgs::Odometry::ConstPtr& msg) {
@@ -823,6 +905,7 @@ void Node::HandlePointCloud2Message(
       ->HandlePointCloud2Message(sensor_id, msg);
 }
 
+// 地图存入硬盘
 void Node::SerializeState(const std::string& filename,
                           const bool include_unfinished_submaps) {
   absl::MutexLock lock(&mutex_);
@@ -830,7 +913,7 @@ void Node::SerializeState(const std::string& filename,
       map_builder_bridge_.SerializeState(filename, include_unfinished_submaps))
       << "Could not write state.";
 }
-
+// 加载地图且确认地图是否更新
 void Node::LoadState(const std::string& state_filename,
                      const bool load_frozen_state) {
   absl::MutexLock lock(&mutex_);

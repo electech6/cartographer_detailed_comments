@@ -44,11 +44,11 @@ class RangeDataCollator {
  private:
   sensor::TimedPointCloudOriginData CropAndMerge();
 
-  const std::set<std::string> expected_sensor_ids_;
+  const std::set<std::string> expected_sensor_ids_; ///期望传感器
   // Store at most one message for each sensor.
-  std::map<std::string, sensor::TimedPointCloudData> id_to_pending_data_;
-  common::Time current_start_ = common::Time::min();
-  common::Time current_end_ = common::Time::min();
+  std::map<std::string, sensor::TimedPointCloudData> id_to_pending_data_; ///传感器id 带时间的点云
+  common::Time current_start_ = common::Time::min();///点云起始时间
+  common::Time current_end_ = common::Time::min(); ///点云终止时间
 };
 
 }  // namespace mapping

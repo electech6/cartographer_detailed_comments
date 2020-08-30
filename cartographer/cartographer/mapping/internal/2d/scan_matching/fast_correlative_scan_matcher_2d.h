@@ -46,6 +46,9 @@ CreateFastCorrelativeScanMatcherOptions2D(
 // A precomputed grid that contains in each cell (x0, y0) the maximum
 // probability in the width x width area defined by x0 <= x < x0 + width and
 // y0 <= y < y0.
+/**
+ * @brief 多分辨率地图的某一个层.
+ */
 class PrecomputationGrid2D {
  public:
   PrecomputationGrid2D(const Grid2D& grid, const CellLimits& limits, int width,
@@ -53,7 +56,13 @@ class PrecomputationGrid2D {
 
   // Returns a value between 0 and 255 to represent probabilities between
   // min_score and max_score.
+  /**
+   * @brief 返回0到255之间的值，以表示min_score和max_score之间的概率。
+   * @param[in] xy_index 
+   * @return int 
+   */
   int GetValue(const Eigen::Array2i& xy_index) const {
+    //定义每个栅格的坐标
     const Eigen::Array2i local_xy_index = xy_index - offset_;
     // The static_cast<unsigned> is for performance to check with 2 comparisons
     // xy_index.x() < offset_.x() || xy_index.y() < offset_.y() ||
@@ -84,14 +93,16 @@ class PrecomputationGrid2D {
 
   // Size of the precomputation grid.
   const CellLimits wide_limits_;
-
+  //最小与最大得分值
   const float min_score_;
   const float max_score_;
 
   // Probabilites mapped to 0 to 255.
   std::vector<uint8> cells_;
 };
-
+/**
+ * @brief 多分辨率地图,由多个PrecomputationGrid2D组成.
+ */
 class PrecomputationGridStack2D {
  public:
   PrecomputationGridStack2D(
@@ -109,6 +120,9 @@ class PrecomputationGridStack2D {
 };
 
 // An implementation of "Real-Time Correlative Scan Matching" by Olson.
+/**
+ * @brief fasts csm.里面包含有多分辨率地图,并且用分枝定界的方式来实现加速.
+ */
 class FastCorrelativeScanMatcher2D {
  public:
   FastCorrelativeScanMatcher2D(

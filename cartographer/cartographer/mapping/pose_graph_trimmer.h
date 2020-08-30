@@ -53,6 +53,7 @@ class Trimmable {
 };
 
 // An interface to implement algorithms that choose how to trim the pose graph.
+//一个接口，用于实现选择如何修剪姿势图的算法。
 class PoseGraphTrimmer {
  public:
   virtual ~PoseGraphTrimmer() {}

@@ -57,15 +57,21 @@ void ProbabilityGrid::SetProbability(const Eigen::Array2i& cell_index,
 // will be set to probability corresponding to 'odds'.
 bool ProbabilityGrid::ApplyLookupTable(const Eigen::Array2i& cell_index,
                                        const std::vector<uint16>& table) {
+  //检查 table 的 size 是否等于一个微小元                                    
   DCHECK_EQ(table.size(), kUpdateMarker);
+  //把 pixel 坐标转化为一维索引值
   const int flat_index = ToFlatIndex(cell_index);
+  //根据索引值求该 cell的地址
   uint16* cell = &(*mutable_correspondence_cost_cells())[flat_index];
   if (*cell >= kUpdateMarker) {
     return false;
   }
   mutable_update_indices()->push_back(flat_index);
+  // 根据该 pixel 返回的值 cell 来查表，获取更新后应该是什么值。然后把这个值放入到 cell 原先的地
+  //址中。实际就是更新该值
   *cell = table[*cell];
   DCHECK_GE(*cell, kUpdateMarker);
+  // 现在就是把该 cell 放入已知概率值的盒子中
   mutable_known_cells_box()->extend(cell_index.matrix());
   return true;
 }
@@ -87,8 +93,12 @@ proto::Grid2D ProbabilityGrid::ToProto() const {
   result.mutable_probability_grid_2d();
   return result;
 }
-
+/**
+ * @brief 计算栅格裁剪的函数
+ * @return std::unique_ptr<Grid2D> 
+ */
 std::unique_ptr<Grid2D> ProbabilityGrid::ComputeCroppedGrid() const {
+  //计算裁剪的限制
   Eigen::Array2i offset;
   CellLimits cell_limits;
   ComputeCroppedLimits(&offset, &cell_limits);

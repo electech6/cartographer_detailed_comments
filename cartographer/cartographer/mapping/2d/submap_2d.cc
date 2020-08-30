@@ -66,7 +66,7 @@ proto::SubmapsOptions2D CreateSubmapsOptions2D(
   CHECK_GT(options.num_range_data(), 0);
   return options;
 }
-
+//Submap 的坐标系旋转角度设置为 0.而原点由参数 origin 给出
 Submap2D::Submap2D(const Eigen::Vector2f& origin, std::unique_ptr<Grid2D> grid,
                    ValueConversionTables* conversion_tables)
     : Submap(transform::Rigid3d::Translation(
@@ -74,7 +74,11 @@ Submap2D::Submap2D(const Eigen::Vector2f& origin, std::unique_ptr<Grid2D> grid,
       conversion_tables_(conversion_tables) {
   grid_ = std::move(grid);
 }
-
+/**
+ * @brief 从 proto 流中构建 Submap2D
+ * @param[in] proto 
+ * @param[in] conversion_tables 
+ */
 Submap2D::Submap2D(const proto::Submap2D& proto,
                    ValueConversionTables* conversion_tables)
     : Submap(transform::ToRigid3(proto.local_pose())),
@@ -92,7 +96,11 @@ Submap2D::Submap2D(const proto::Submap2D& proto,
   set_num_range_data(proto.num_range_data());
   set_insertion_finished(proto.finished());
 }
-
+/**
+ * @brief 与 proto 流相关的处理：序列化存到proto中
+ * @param[in] include_grid_data 
+ * @return proto::Submap 
+ */
 proto::Submap Submap2D::ToProto(const bool include_grid_data) const {
   proto::Submap proto;
   auto* const submap_2d = proto.mutable_submap_2d();
@@ -101,11 +109,15 @@ proto::Submap Submap2D::ToProto(const bool include_grid_data) const {
   submap_2d->set_finished(insertion_finished());
   if (include_grid_data) {
     CHECK(grid_);
+    ////调用 grid_中的 ToProto 函数把概率图保存到proto 中
     *submap_2d->mutable_grid() = grid_->ToProto();
   }
   return proto;
 }
-
+/**
+ * @brief 从 proto 流中获取 Submap2D
+ * @param[in] proto 
+ */
 void Submap2D::UpdateFromProto(const proto::Submap& proto) {
   CHECK(proto.has_submap_2d());
   const auto& submap_2d = proto.submap_2d();
@@ -123,7 +135,10 @@ void Submap2D::UpdateFromProto(const proto::Submap& proto) {
     }
   }
 }
-
+/**
+ * @brief 放到 response 中
+ * @param[in] response 
+ */
 void Submap2D::ToResponseProto(
     const transform::Rigid3d&,
     proto::SubmapQuery::Response* const response) const {
@@ -133,20 +148,30 @@ void Submap2D::ToResponseProto(
       response->add_textures();
   grid()->DrawToSubmapTexture(texture, local_pose());
 }
-
+/**
+ * @brief 插入点云数据
+ * @param[in] range_data 
+ * @param[in] range_data_inserter 
+ */
 void Submap2D::InsertRangeData(
     const sensor::RangeData& range_data,
     const RangeDataInserterInterface* range_data_inserter) {
+  //检查Grid不为空，且完成标志为未完成
   CHECK(grid_);
   CHECK(!insertion_finished());
+  //用概率网格范围数据插入器2D进行插入激光数据,调用 RangeDataInserterInterface 来更新概率图。
   range_data_inserter->Insert(range_data, grid_.get());
+  //插入点云数据+1 
   set_num_range_data(num_range_data() + 1);
 }
 
 void Submap2D::Finish() {
+  //检查Grid不为空，且完成标志为未完成
   CHECK(grid_);
   CHECK(!insertion_finished());
+  //计算裁剪栅格地图 
   grid_ = grid_->ComputeCroppedGrid();
+  //将插入子图完成设置成true
   set_insertion_finished(true);
 }
 
@@ -157,16 +182,26 @@ std::vector<std::shared_ptr<const Submap2D>> ActiveSubmaps2D::submaps() const {
   return std::vector<std::shared_ptr<const Submap2D>>(submaps_.begin(),
                                                       submaps_.end());
 }
-
+/**
+ * @brief 向子图中插入点云函数
+ * @param[in] range_data 
+ * @return std::vector<std::shared_ptr<const Submap2D>> 
+ */
 std::vector<std::shared_ptr<const Submap2D>> ActiveSubmaps2D::InsertRangeData(
     const sensor::RangeData& range_data) {
+  //submaps_ 的vector 保留了两个子图，一个用于匹配，一个用于构建。
+  //当submaps_ vector 为空或者是submaps_ vector 的最后submap插入的激光数据达到 
+  //设定的值options_.num_range_data 时，添加子图AddSubmap
   if (submaps_.empty() ||
       submaps_.back()->num_range_data() == options_.num_range_data()) {
     AddSubmap(range_data.origin.head<2>());
   }
+  //给submaps_的vector 中的submap 添加激光数据 ，函数InsertRangeData
   for (auto& submap : submaps_) {
     submap->InsertRangeData(range_data, range_data_inserter_.get());
   }
+  //当submaps_ 的vector 的第一个submap 插入激光数据为  2*options_.num_range_data 时，子图完成Finish
+  // ? num_range_data指的是点云数量？重叠50%
   if (submaps_.front()->num_range_data() == 2 * options_.num_range_data()) {
     submaps_.front()->Finish();
   }
@@ -188,13 +223,20 @@ ActiveSubmaps2D::CreateRangeDataInserter() {
       LOG(FATAL) << "Unknown RangeDataInserterType.";
   }
 }
-
+/**
+ * @brief CreateGrid函数
+ * @param[in] origin 
+ * @return std::unique_ptr<GridInterface> 
+ */
 std::unique_ptr<GridInterface> ActiveSubmaps2D::CreateGrid(
     const Eigen::Vector2f& origin) {
+  //初始化栅格地图的大小100 ，获取分辨率的值
   constexpr int kInitialSubmapSize = 100;
   float resolution = options_.grid_options_2d().resolution();
   switch (options_.grid_options_2d().grid_type()) {
+    //选择创建栅格地图
     case proto::GridOptions2D::PROBABILITY_GRID:
+    //二维栅格地图的构建  Eigen::Vector2d::Ones() 二维列向量[1,1]
       return absl::make_unique<ProbabilityGrid>(
           MapLimits(resolution,
                     origin.cast<double>() + 0.5 * kInitialSubmapSize *
@@ -202,6 +244,7 @@ std::unique_ptr<GridInterface> ActiveSubmaps2D::CreateGrid(
                                                 Eigen::Vector2d::Ones(),
                     CellLimits(kInitialSubmapSize, kInitialSubmapSize)),
           &conversion_tables_);
+    //选择TSDF类型建图，精度更高
     case proto::GridOptions2D::TSDF:
       return absl::make_unique<TSDF2D>(
           MapLimits(resolution,
@@ -220,14 +263,19 @@ std::unique_ptr<GridInterface> ActiveSubmaps2D::CreateGrid(
       LOG(FATAL) << "Unknown GridType.";
   }
 }
-
+/**
+ * @brief 添加子图函数
+ * @param[in] origin 
+ */
 void ActiveSubmaps2D::AddSubmap(const Eigen::Vector2f& origin) {
+  //检查submaps_ vector 子图数量，大于2个时，删除开始的子图
   if (submaps_.size() >= 2) {
     // This will crop the finished Submap before inserting a new Submap to
     // reduce peak memory usage a bit.
     CHECK(submaps_.front()->insertion_finished());
     submaps_.erase(submaps_.begin());
   }
+  //压入子图
   submaps_.push_back(absl::make_unique<Submap2D>(
       origin,
       std::unique_ptr<Grid2D>(

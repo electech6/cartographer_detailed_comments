@@ -42,6 +42,13 @@ proto::SubmapsOptions2D CreateSubmapsOptions2D(
 
 class Submap2D : public Submap {
  public:
+ /**
+  * @brief Construct a new Submap 2 D object
+  * @param[in] origin 坐标原点
+  * @param[in] grid Grid2D 变量
+  * @param[in] conversion_tables 
+  */
+ // ? 为什么加入ValueConversionTables对象参数
   Submap2D(const Eigen::Vector2f& origin, std::unique_ptr<Grid2D> grid,
            ValueConversionTables* conversion_tables);
   explicit Submap2D(const proto::Submap2D& proto,
@@ -52,7 +59,7 @@ class Submap2D : public Submap {
 
   void ToResponseProto(const transform::Rigid3d& global_submap_pose,
                        proto::SubmapQuery::Response* response) const override;
-
+  //返回 grid_
   const Grid2D* grid() const { return grid_.get(); }
 
   // Insert 'range_data' into this submap using 'range_data_inserter'. The
@@ -78,19 +85,26 @@ class Submap2D : public Submap {
 // "new" submap gets created. The "old" submap is forgotten by this object.
 class ActiveSubmaps2D {
  public:
+ /**
+  * @brief Construct a new Active Submaps 2 D object
+  * @param[in] options 
+  */
   explicit ActiveSubmaps2D(const proto::SubmapsOptions2D& options);
 
   ActiveSubmaps2D(const ActiveSubmaps2D&) = delete;
   ActiveSubmaps2D& operator=(const ActiveSubmaps2D&) = delete;
 
   // Inserts 'range_data' into the Submap collection.
+  // 插入传感器数据
   std::vector<std::shared_ptr<const Submap2D>> InsertRangeData(
       const sensor::RangeData& range_data);
 
   std::vector<std::shared_ptr<const Submap2D>> submaps() const;
 
  private:
+  //创建点云插入栅格地图指针
   std::unique_ptr<RangeDataInserterInterface> CreateRangeDataInserter();
+  //创建栅格地图指针
   std::unique_ptr<GridInterface> CreateGrid(const Eigen::Vector2f& origin);
   void FinishSubmap();
   void AddSubmap(const Eigen::Vector2f& origin);

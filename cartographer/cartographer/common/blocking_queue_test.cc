@@ -28,11 +28,16 @@ namespace common {
 namespace {
 
 TEST(BlockingQueueTest, testPushPeekPop) {
+  //元素是智能指针
   BlockingQueue<std::unique_ptr<int>> blocking_queue;
   blocking_queue.Push(absl::make_unique<int>(42));
+  //ASSERT_* 系列的断点，当检查点失败时，退出当前函数（注意：并非退出当前案例）
+  //检测blocking_queue是否为1
   ASSERT_EQ(1, blocking_queue.Size());
   blocking_queue.Push(absl::make_unique<int>(24));
   ASSERT_EQ(2, blocking_queue.Size());
+  // EXPECT_* 系列的断点，当检查点失败时，继续往下执行。
+  //检测blocking_queue头部元素是否为42
   EXPECT_EQ(42, *blocking_queue.Peek<int>());
   ASSERT_EQ(2, blocking_queue.Size());
   EXPECT_EQ(42, *blocking_queue.Pop());

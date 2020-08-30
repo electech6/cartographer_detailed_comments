@@ -39,6 +39,7 @@ struct PixelData {
 // Filters 'range_data', retaining only the returns that have no more than
 // 'max_range' distance from the origin. Removes misses and reflectivity
 // information.
+///通过高分辨率最大范围阈值 滤波 只保留范围在阈值内的点
 sensor::RangeData FilterRangeDataByMaxRange(const sensor::RangeData& range_data,
                                             const float max_range) {
   sensor::RangeData result{range_data.origin, {}, {}};
@@ -196,6 +197,7 @@ proto::SubmapsOptions3D CreateSubmapsOptions3D(
   return options;
 }
 
+///构造一个局部地图
 Submap3D::Submap3D(const float high_resolution, const float low_resolution,
                    const transform::Rigid3d& local_submap_pose,
                    const Eigen::VectorXf& rotational_scan_matcher_histogram)
@@ -268,6 +270,10 @@ void Submap3D::ToResponseProto(
                     response->add_textures());
 }
 
+///将点云数据插入到局部地图内
+///将点云变换到该局部地图下 将高分辨点云数据插入高分辨率概率格栅地图 将低分辨点云数据插入低分辨率概率格栅地图
+///该局部地图累计数据输入次数+1 将点云直方图旋转 给定上一帧和局部地图位姿yaw角后 添加到局部地图直方图内
+///世界坐标系滤波后累计数据点云 高分辨率最大范围 上一帧位姿inv 点云旋转直方图(Imu)
 void Submap3D::InsertData(const sensor::RangeData& range_data_in_local,
                           const RangeDataInserter3D& range_data_inserter,
                           const float high_resolution_max_range,
@@ -275,17 +281,27 @@ void Submap3D::InsertData(const sensor::RangeData& range_data_in_local,
                           const Eigen::VectorXf& scan_histogram_in_gravity) {
   CHECK(!insertion_finished());
   // Transform range data into submap frame.
+  ///将点云变换到该局部地图下
   const sensor::RangeData transformed_range_data = sensor::TransformRangeData(
       range_data_in_local, local_pose().inverse().cast<float>());
+
+  ///FilterRangeDataByMaxRange 通过高分辨率最大范围阈值 滤波 只保留范围在阈值内的点
+  ///将高分辨点云数据插入高分辨率概率格栅地图
   range_data_inserter.Insert(
       FilterRangeDataByMaxRange(transformed_range_data,
                                 high_resolution_max_range),
       high_resolution_hybrid_grid_.get());
+
+  ///将低分辨点云数据插入低分辨率概率格栅地图
   range_data_inserter.Insert(transformed_range_data,
                              low_resolution_hybrid_grid_.get());
-  set_num_range_data(num_range_data() + 1);
-  const float yaw_in_submap_from_gravity = transform::GetYaw(
+
+  set_num_range_data(num_range_data() + 1); ///该局部地图累计数据输入次数+1
+
+  const float yaw_in_submap_from_gravity = transform::GetYaw( ///上一帧到局部地图位姿变化
       local_pose().inverse().rotation() * local_from_gravity_aligned);
+
+  ///将点云直方图旋转给定yaw角后添加到局部地图直方图内
   rotational_scan_matcher_histogram_ +=
       scan_matching::RotationalScanMatcher::RotateHistogram(
           scan_histogram_in_gravity, yaw_in_submap_from_gravity);
@@ -305,39 +321,62 @@ std::vector<std::shared_ptr<const Submap3D>> ActiveSubmaps3D::submaps() const {
                                                       submaps_.end());
 }
 
+///将这次累计数据 添加到局部地图列表中的所有局部地图中 局部地图列表为null 或最后一张局部地图足够多 构造新的局部地图
+///局部地图列表中的每一个局部地图 将点云变换到该局部地图下 将高分辨点云数据插入高分辨率概率格栅地图
+///将低分辨点云数据插入低分辨率概率格栅地图 该局部地图累计数据输入次数+1 将点云直方图旋转 给定上一帧和局部地图位姿yaw角后
+///添加到局部地图直方图内 一张局部地图 最大能接受2*options_.num_range_data次 累计数据
+///输入; 世界坐标系滤波后累计数据点云 激光匹配和重力匹配的旋转差 点云旋转直方图(Imu)
+///输出: 局部地图列表
 std::vector<std::shared_ptr<const Submap3D>> ActiveSubmaps3D::InsertData(
     const sensor::RangeData& range_data,
     const Eigen::Quaterniond& local_from_gravity_aligned,
     const Eigen::VectorXf& rotational_scan_matcher_histogram_in_gravity) {
+
+    ///局部地图列表为null 或最后一张局部地图足够多 构造新的局部地图
   if (submaps_.empty() ||
       submaps_.back()->num_range_data() == options_.num_range_data()) {
+
+    ///向局部地图列表中添加一个局部地图
     AddSubmap(transform::Rigid3d(range_data.origin.cast<double>(),
                                  local_from_gravity_aligned),
               rotational_scan_matcher_histogram_in_gravity.size());
   }
+
+  ///局部地图列表中的每一个局部地图
   for (auto& submap : submaps_) {
+    ///将点云数据插入到局部地图内
+    ///将点云变换到该局部地图下 将高分辨点云数据插入高分辨率概率格栅地图 将低分辨点云数据插入低分辨率概率格栅地图
+    ///该局部地图累计数据输入次数+1 将点云直方图旋转 给定上一帧和局部地图位姿yaw角后 添加到局部地图直方图内
     submap->InsertData(range_data, range_data_inserter_,
                        options_.high_resolution_max_range(),
                        local_from_gravity_aligned,
                        rotational_scan_matcher_histogram_in_gravity);
   }
+
+  ///一张局部地图 最大能接受2*options_.num_range_data次 累计数据
   if (submaps_.front()->num_range_data() == 2 * options_.num_range_data()) {
     submaps_.front()->Finish();
   }
   return submaps();
 }
 
+///向局部地图列表中添加一个局部地图
+///局部地图位姿 旋转直方图大小
 void ActiveSubmaps3D::AddSubmap(
     const transform::Rigid3d& local_submap_pose,
     const int rotational_scan_matcher_histogram_size) {
+
+    ///清除局部地图列表中的第一个局部地图
   if (submaps_.size() >= 2) {
     // This will crop the finished Submap before inserting a new Submap to
     // reduce peak memory usage a bit.
     CHECK(submaps_.front()->insertion_finished());
     submaps_.erase(submaps_.begin());
   }
+
   const Eigen::VectorXf initial_rotational_scan_matcher_histogram =
       Eigen::VectorXf::Zero(rotational_scan_matcher_histogram_size);
+
   submaps_.emplace_back(new Submap3D(
       options_.high_resolution(), options_.low_resolution(), local_submap_pose,
       initial_rotational_scan_matcher_histogram));

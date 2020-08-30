@@ -40,6 +40,7 @@ class CollatedTrajectoryBuilder : public TrajectoryBuilderInterface {
  public:
   using SensorId = TrajectoryBuilderInterface::SensorId;
 
+  ///轨迹构造器配置 传感器校正器 轨迹id 范围传感器id(vector) 全局轨迹构造器
   CollatedTrajectoryBuilder(
       const proto::TrajectoryBuilderOptions& trajectory_options,
       sensor::CollatorInterface* sensor_collator, int trajectory_id,
@@ -51,6 +52,7 @@ class CollatedTrajectoryBuilder : public TrajectoryBuilderInterface {
   CollatedTrajectoryBuilder& operator=(const CollatedTrajectoryBuilder&) =
       delete;
 
+  ///传感器id 已经经过传感器位姿推断变换的的时间点云数据
   void AddSensorData(
       const std::string& sensor_id,
       const sensor::TimedPointCloudData& timed_point_cloud_data) override {
@@ -98,11 +100,11 @@ class CollatedTrajectoryBuilder : public TrajectoryBuilderInterface {
   void HandleCollatedSensorData(const std::string& sensor_id,
                                 std::unique_ptr<sensor::Data> data);
 
-  sensor::CollatorInterface* const sensor_collator_;
+  sensor::CollatorInterface* const sensor_collator_; ///传感器校正器 TrajectoryCollator或Collator
   const bool collate_landmarks_;
   const bool collate_fixed_frame_;
-  const int trajectory_id_;
-  std::unique_ptr<TrajectoryBuilderInterface> wrapped_trajectory_builder_;
+  const int trajectory_id_; ///轨迹id
+  std::unique_ptr<TrajectoryBuilderInterface> wrapped_trajectory_builder_; ///全局位姿构造器
 
   // Time at which we last logged the rates of incoming sensor data.
   std::chrono::steady_clock::time_point last_logging_time_;

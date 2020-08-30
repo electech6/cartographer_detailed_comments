@@ -39,8 +39,9 @@ struct CellLimits {
   explicit CellLimits(const proto::CellLimits& cell_limits)
       : num_x_cells(cell_limits.num_x_cells()),
         num_y_cells(cell_limits.num_y_cells()) {}
-
+  //x 方向划分的栅格数，也是 pixel 坐标情况下的最大范围
   int num_x_cells = 0;
+  //y 方向划分的栅格数
   int num_y_cells = 0;
 };
 

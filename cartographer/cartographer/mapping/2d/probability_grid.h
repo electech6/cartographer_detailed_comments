@@ -37,6 +37,7 @@ class ProbabilityGrid : public Grid2D {
 
   // Sets the probability of the cell at 'cell_index' to the given
   // 'probability'. Only allowed if the cell was unknown before.
+  //用来设置一个给定 pixel 坐标的概率值
   void SetProbability(const Eigen::Array2i& cell_index,
                       const float probability);
 

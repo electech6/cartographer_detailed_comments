@@ -21,17 +21,30 @@
 
 namespace cartographer {
 namespace sensor {
-
+/**
+ * @brief 根据3D转换，变成新的点云
+ * @param[in] point_cloud 
+ * @param[in] transform 
+ * @return PointCloud 
+ */
 PointCloud TransformPointCloud(const PointCloud& point_cloud,
                                const transform::Rigid3f& transform) {
   PointCloud result;
+  //预留点云大小的空间
   result.reserve(point_cloud.size());
   for (const RangefinderPoint& point : point_cloud) {
+    //将转换后的点云压入容器
     result.emplace_back(transform * point);
   }
+  //返回新的点云数据
   return result;
 }
-
+/**
+ * @brief 和上面的TransformPointCloud类似，只是容器加了一个时间的变量
+ * @param[in] point_cloud 
+ * @param[in] transform 
+ * @return TimedPointCloud 
+ */
 TimedPointCloud TransformTimedPointCloud(const TimedPointCloud& point_cloud,
                                          const transform::Rigid3f& transform) {
   TimedPointCloud result;
@@ -41,7 +54,13 @@ TimedPointCloud TransformTimedPointCloud(const TimedPointCloud& point_cloud,
   }
   return result;
 }
-
+/**
+ * @brief 裁剪Z轴范围的点云
+ * @param[in] point_cloud 
+ * @param[in] min_z 
+ * @param[in] max_z 
+ * @return PointCloud 
+ */
 PointCloud CropPointCloud(const PointCloud& point_cloud, const float min_z,
                           const float max_z) {
   PointCloud cropped_point_cloud;
@@ -52,7 +71,13 @@ PointCloud CropPointCloud(const PointCloud& point_cloud, const float min_z,
   }
   return cropped_point_cloud;
 }
-
+/**
+ * @brief 和上面的CropPointCloud差不多，只是容器加了一个时间的变量
+ * @param[in] point_cloud 
+ * @param[in] min_z 
+ * @param[in] max_z 
+ * @return TimedPointCloud 
+ */
 TimedPointCloud CropTimedPointCloud(const TimedPointCloud& point_cloud,
                                     const float min_z, const float max_z) {
   TimedPointCloud cropped_point_cloud;

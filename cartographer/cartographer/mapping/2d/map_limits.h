@@ -39,6 +39,12 @@ namespace mapping {
 // performance reasons.
 class MapLimits {
  public:
+ /**
+  * @brief Construct a new Map Limits object
+  * @param[in] resolution 分辨率
+  * @param[in] max 
+  * @param[in] cell_limits 
+  */
   MapLimits(const double resolution, const Eigen::Vector2d& max,
             const CellLimits& cell_limits)
       : resolution_(resolution), max_(max), cell_limits_(cell_limits) {
@@ -54,18 +60,26 @@ class MapLimits {
 
   // Returns the cell size in meters. All cells are square and the resolution is
   // the length of one side.
+  //获取分别率
   double resolution() const { return resolution_; }
 
   // Returns the corner of the limits, i.e., all pixels have positions with
   // smaller coordinates.
+  //获取最大范围值
   const Eigen::Vector2d& max() const { return max_; }
 
   // Returns the limits of the grid in number of cells.
+  //获取pixel 坐标的最大范围
   const CellLimits& cell_limits() const { return cell_limits_; }
 
   // Returns the index of the cell containing the 'point' which may be outside
   // the map, i.e., negative or too large indices that will return false for
   // Contains().
+  /**
+   * @brief Get the Cell Index object
+   * @param[in] point 
+   * @return Eigen::Array2i 
+   */
   Eigen::Array2i GetCellIndex(const Eigen::Vector2f& point) const {
     // Index values are row major and the top left has Eigen::Array2i::Zero()
     // and contains (centered_max_x, centered_max_y). We need to flip and
@@ -76,6 +90,7 @@ class MapLimits {
   }
 
   // Returns the center of the cell at 'cell_index'.
+  // ? 与上个函数之间的关系
   Eigen::Vector2f GetCellCenter(const Eigen::Array2i cell_index) const {
     return {max_.x() - resolution() * (cell_index[1] + 0.5),
             max_.y() - resolution() * (cell_index[0] + 0.5)};
@@ -90,8 +105,11 @@ class MapLimits {
   }
 
  private:
+  //分辨率
   double resolution_;
+  //一个浮点型二维向量
   Eigen::Vector2d max_;
+  //栅格化后的 x 和 y 方向的最大范围
   CellLimits cell_limits_;
 };
 

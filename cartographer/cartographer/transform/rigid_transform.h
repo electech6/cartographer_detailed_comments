@@ -116,8 +116,11 @@ using Rigid2f = Rigid2<float>;
 template <typename FloatType>
 class Rigid3 {
  public:
+  //对3*1的矩阵使用别名
   using Vector = Eigen::Matrix<FloatType, 3, 1>;
+  //创建float类型的四元数的别名
   using Quaternion = Eigen::Quaternion<FloatType>;
+  //创建float类型轴角的别名
   using AngleAxis = Eigen::AngleAxis<FloatType>;
 
   Rigid3() : translation_(Vector::Zero()), rotation_(Quaternion::Identity()) {}

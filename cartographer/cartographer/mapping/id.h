@@ -54,14 +54,18 @@ common::Time GetTime(const T& t) {
 
 // Uniquely identifies a trajectory node using a combination of a unique
 // trajectory ID and a zero-based index of the node inside that trajectory.
+/**
+ * @brief 用来存储一帧激光数据插入到 submap 中的结果的。一个是轨迹ID，一个是结点序号
+ */
 struct NodeId {
   NodeId(int trajectory_id, int node_index)
       : trajectory_id(trajectory_id), node_index(node_index) {}
 
   int trajectory_id;
   int node_index;
-
+  // 重载等于、不等于、小于等运算符
   bool operator==(const NodeId& other) const {
+    //创建右值的引用元组方法
     return std::forward_as_tuple(trajectory_id, node_index) ==
            std::forward_as_tuple(other.trajectory_id, other.node_index);
   }
@@ -72,7 +76,7 @@ struct NodeId {
     return std::forward_as_tuple(trajectory_id, node_index) <
            std::forward_as_tuple(other.trajectory_id, other.node_index);
   }
-
+  //序列化
   void ToProto(proto::NodeId* proto) const {
     proto->set_trajectory_id(trajectory_id);
     proto->set_node_index(node_index);
@@ -85,6 +89,9 @@ inline std::ostream& operator<<(std::ostream& os, const NodeId& v) {
 
 // Uniquely identifies a submap using a combination of a unique trajectory ID
 // and a zero-based index of the submap inside that trajectory.
+/**
+ * @brief 子图ID的结构体，和前面NodeID类似
+ */
 struct SubmapId {
   SubmapId(int trajectory_id, int submap_index)
       : trajectory_id(trajectory_id), submap_index(submap_index) {}
@@ -132,6 +139,9 @@ class Range {
 // 'SubmapId'.
 // Note: This container will only ever contain non-empty trajectories. Trimming
 // the last remaining node of a trajectory drops the trajectory.
+/**
+ * @brief 对std::map的一个封装
+ */
 template <typename IdType, typename DataType>
 class MapById {
  private:

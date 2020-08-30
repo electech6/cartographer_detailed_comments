@@ -26,10 +26,13 @@ namespace scan_matching {
 
 // Computes the cost of translating 'translation' to 'target_translation'.
 // Cost increases with the solution's distance from 'target_translation'.
+///计算将“平移”转换为“目标平移”的成本。随着解决方案与“目标”的距离增加，成本增加
 class TranslationDeltaCostFunctor3D {
  public:
+    ///尺度因子 旋转
   static ceres::CostFunction* CreateAutoDiffCostFunction(
       const double scaling_factor, const Eigen::Vector3d& target_translation) {
+      ///具体使用的costfunction类 残差维度 顶点维度
     return new ceres::AutoDiffCostFunction<TranslationDeltaCostFunctor3D,
                                            3 /* residuals */,
                                            3 /* translation variables */>(
@@ -59,6 +62,7 @@ class TranslationDeltaCostFunctor3D {
       const TranslationDeltaCostFunctor3D&) = delete;
 
   const double scaling_factor_;
+  ///初始位姿
   const double x_;
   const double y_;
   const double z_;

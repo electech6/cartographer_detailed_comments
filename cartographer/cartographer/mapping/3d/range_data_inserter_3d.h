@@ -42,7 +42,11 @@ class RangeDataInserter3D {
 
  private:
   const proto::RangeDataInserterOptions3D options_;
+
+  //32768长度的vector 占据可能性的概率离散值(1~32767) + 32768 1~32767对应的可能性*占据可能性 再转化成概率离散值+32768
   const std::vector<uint16> hit_table_;
+
+  //32768长度的vector 空缺可能性的概率离散值(1~32767) + 32768 1~32767对应的可能性*空缺可能性 再转化成概率离散值+32768
   const std::vector<uint16> miss_table_;
 };
 

@@ -37,7 +37,9 @@ class FakeThreadPool : public ThreadPoolInterface {
  public:
   void NotifyDependenciesCompleted(Task* task) override {
     auto it = tasks_not_ready_.find(task);
+    //判断是否map的末尾
     ASSERT_NE(it, tasks_not_ready_.end());
+    //压入队列
     task_queue_.push_back(it->second);
     tasks_not_ready_.erase(it);
   }

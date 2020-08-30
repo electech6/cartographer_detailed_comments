@@ -20,25 +20,32 @@ namespace cartographer {
 namespace mapping {
 namespace optimization {
 
+///将位姿转化为结构体
 CeresPose::Data FromPose(const transform::Rigid3d& pose) {
+    ///std::array的构造方式和数组相同
   return CeresPose::Data{{{pose.translation().x(), pose.translation().y(),
                            pose.translation().z()}},
                          {{pose.rotation().w(), pose.rotation().x(),
                            pose.rotation().y(), pose.rotation().z()}}};
 }
 
+/// 获取位姿 向ceres问题中添加顶点
+/// 初始位姿估计 平移全局局部维度转换类 旋转全局局部维度转换类 ceres问题
 CeresPose::CeresPose(
     const transform::Rigid3d& pose,
     std::unique_ptr<ceres::LocalParameterization> translation_parametrization,
     std::unique_ptr<ceres::LocalParameterization> rotation_parametrization,
     ceres::Problem* problem)
     : data_(std::make_shared<CeresPose::Data>(FromPose(pose))) {
+    /// (unique_ptr).release() 调用release 会切断unique_ptr 和它原来管理的对象的联系。
+    /// release 返回的指针通常被用来初始化另一个智能指针或给另一个智能指针赋值。
   problem->AddParameterBlock(data_->translation.data(), 3,
                              translation_parametrization.release());
   problem->AddParameterBlock(data_->rotation.data(), 4,
                              rotation_parametrization.release());
 }
 
+///将data_中的数据转化为Rigid位姿
 const transform::Rigid3d CeresPose::ToRigid() const {
   return transform::Rigid3d::FromArrays(data_->rotation, data_->translation);
 }

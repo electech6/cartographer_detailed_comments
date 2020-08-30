@@ -25,19 +25,20 @@
 
 namespace cartographer {
 namespace common {
-
+//友元时，需要先声明
 class ThreadPoolInterface;
 
 class Task {
  public:
   friend class ThreadPoolInterface;
-
+  //给函数包装器一个别称 WorkItem
   using WorkItem = std::function<void()>;
+  // 定义一个枚举，5个元素
   enum State { NEW, DISPATCHED, DEPENDENCIES_COMPLETED, RUNNING, COMPLETED };
 
   Task() = default;
   ~Task();
-
+  // 得到当时的状态
   State GetState() LOCKS_EXCLUDED(mutex_);
 
   // State must be 'NEW'.
@@ -66,7 +67,7 @@ class Task {
   State state_ GUARDED_BY(mutex_) = NEW;
   unsigned int uncompleted_dependencies_ GUARDED_BY(mutex_) = 0;
   std::set<Task*> dependent_tasks_ GUARDED_BY(mutex_);
-
+  //设置互斥量，保证线程安全
   absl::Mutex mutex_;
 };
 

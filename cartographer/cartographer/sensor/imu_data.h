@@ -23,7 +23,9 @@
 
 namespace cartographer {
 namespace sensor {
-
+/**
+ * @brief 构建ImuData结构体
+ */
 struct ImuData {
   common::Time time;
   Eigen::Vector3d linear_acceleration;
@@ -31,9 +33,11 @@ struct ImuData {
 };
 
 // Converts 'imu_data' to a proto::ImuData.
+//序列化
 proto::ImuData ToProto(const ImuData& imu_data);
 
 // Converts 'proto' to an ImuData.
+//反序列化
 ImuData FromProto(const proto::ImuData& proto);
 
 }  // namespace sensor

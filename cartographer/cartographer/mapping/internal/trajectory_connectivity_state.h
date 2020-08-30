@@ -37,6 +37,7 @@ class TrajectoryConnectivityState {
       delete;
 
   // Add a trajectory which is initially connected to only itself.
+  //添加一条轨迹
   void Add(int trajectory_id);
 
   // Connect two trajectories. If either trajectory is untracked, it will be
@@ -52,15 +53,18 @@ class TrajectoryConnectivityState {
   bool TransitivelyConnected(int trajectory_id_a, int trajectory_id_b) const;
 
   // The trajectory IDs, grouped by connectivity.
+  // 返回一个 int 型的向量，这个向量里存的是具有 connectivity 关系的 trajectory 的 id.
   std::vector<std::vector<int>> Components() const;
 
   // Return the last connection count between the two trajectories. If either of
   // the trajectories is untracked or they have never been connected returns the
   // beginning of time.
+   // 返回两条 trajectory 的上次链接时间。
   common::Time LastConnectionTime(int trajectory_id_a, int trajectory_id_b);
 
  private:
   // ConnectedComponents are thread safe.
+  // 存储所有的连接关系
   mutable ConnectedComponents connected_components_;
 
   // Tracks the last time a direct connection between two trajectories has
@@ -68,6 +72,7 @@ class TrajectoryConnectivityState {
   // connects two formerly unconnected connected components. In this case all
   // bipartite trajectories entries for these components are updated with the
   // new connection time.
+  // 返回任意两个指定 id 的 trajectory 的上次连接时间
   std::map<std::pair<int, int>, common::Time> last_connection_time_map_;
 };
 

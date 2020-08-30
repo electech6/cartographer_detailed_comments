@@ -20,15 +20,24 @@
 
 namespace cartographer {
 namespace common {
-
+/**
+ * @brief Construct a new Fixed Ratio Sampler:: Fixed Ratio Sampler object
+ * @param[in] ratio 
+ */
 FixedRatioSampler::FixedRatioSampler(const double ratio) : ratio_(ratio) {
+  //ratio是否等于0
   CHECK_GE(ratio, 0.);
   LOG_IF(WARNING, ratio == 0.) << "FixedRatioSampler is dropping all data.";
+  //ration<=1？
   CHECK_LE(ratio, 1.);
 }
 
 FixedRatioSampler::~FixedRatioSampler() {}
-
+/**
+ * @brief 
+ * @return true 如果当前采样率 samples/ pulses低于固定采样率,此次事件计入采样.
+ * @return false 
+ */
 bool FixedRatioSampler::Pulse() {
   ++num_pulses_;
   if (static_cast<double>(num_samples_) / num_pulses_ < ratio_) {

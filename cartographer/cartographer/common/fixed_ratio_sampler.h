@@ -26,6 +26,13 @@ namespace common {
 
 // Signals when a sample should be taken from a stream of data to select a
 // uniformly distributed fraction of the data.
+/**
+ * @brief 
+ * 构造函数：FixedRatioSampler
+ * 成员函数：Pulse()、DebugString()
+ * 成员变量：ratio_、num_pulses_、num_samples_
+ * 
+ */
 class FixedRatioSampler {
  public:
   explicit FixedRatioSampler(double ratio);
@@ -44,8 +51,9 @@ class FixedRatioSampler {
   // Sampling occurs if the proportion of samples to pulses drops below this
   // number.
   const double ratio_;
-
+  //脉冲数量
   int64 num_pulses_ = 0;
+  //采样数量
   int64 num_samples_ = 0;
 };
 

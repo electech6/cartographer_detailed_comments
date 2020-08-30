@@ -35,6 +35,9 @@ proto::CeresScanMatcherOptions2D CreateCeresScanMatcherOptions2D(
     common::LuaParameterDictionary* parameter_dictionary);
 
 // Align scans with an existing map using Ceres.
+/**
+ * @brief 用ceres进行优化匹配.
+ */
 class CeresScanMatcher2D {
  public:
   explicit CeresScanMatcher2D(const proto::CeresScanMatcherOptions2D& options);
@@ -46,6 +49,15 @@ class CeresScanMatcher2D {
   // Aligns 'point_cloud' within the 'grid' given an
   // 'initial_pose_estimate' and returns a 'pose_estimate' and the solver
   // 'summary'.
+  /**
+   * @brief 进行ceres的匹配.
+   * @param[in] target_translation 
+   * @param[in] initial_pose_estimate 
+   * @param[in] point_cloud 
+   * @param[in] grid 
+   * @param[in] pose_estimate 
+   * @param[in] summary 
+   */
   void Match(const Eigen::Vector2d& target_translation,
              const transform::Rigid2d& initial_pose_estimate,
              const sensor::PointCloud& point_cloud, const Grid2D& grid,

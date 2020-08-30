@@ -41,17 +41,28 @@ namespace mapping {
 // Wires up the local SLAM stack (i.e. pose extrapolator, scan matching, etc.)
 // without loop closure.
 // TODO(gaschler): Add test for this class similar to the 3D test.
+/**
+ * @brief 2D-SLAM的前端，把pose extrapolator和scan matching等模块链接起来,构成前端.
+ * 负责位姿图的构建和子图的生成,不包括回环检测.
+ */
 class LocalTrajectoryBuilder2D {
  public:
+  
+  // Note 与 TrajectoryBuilderInterface 中定义的 InsertionResult 相比，这里缺了一个 NodeId
   struct InsertionResult {
+    //节点数据
     std::shared_ptr<const TrajectoryNode::Data> constant_data;
     std::vector<std::shared_ptr<const Submap2D>> insertion_submaps;
   };
+  /**
+   * @brief matching 结果。包括时间、匹配的 local_pose、传感器数据、插入结果等
+   */
   struct MatchingResult {
     common::Time time;
     transform::Rigid3d local_pose;
     sensor::RangeData range_data_in_local;
     // 'nullptr' if dropped by the motion filter.
+    // 如果被 MotionFilter 滤掉了，那么 insertion_result 返回空指针。
     std::unique_ptr<const InsertionResult> insertion_result;
   };
 
@@ -98,24 +109,27 @@ class LocalTrajectoryBuilder2D {
 
   // Lazily constructs a PoseExtrapolator.
   void InitializeExtrapolator(common::Time time);
-
+  //参数配置项
   const proto::LocalTrajectoryBuilderOptions2D options_;
   ActiveSubmaps2D active_submaps_;
 
   MotionFilter motion_filter_;
+  //实时的扫描匹配，用的相关分析方法
   scan_matching::RealTimeCorrelativeScanMatcher2D
       real_time_correlative_scan_matcher_;
+  //Ceres 方法匹配
   scan_matching::CeresScanMatcher2D ceres_scan_matcher_;
-
+  //轨迹推算器。融合 IMU，里程计数据
   std::unique_ptr<PoseExtrapolator> extrapolator_;
-
+  //累积数据的数量
   int num_accumulated_ = 0;
+  //该轨迹的累积数据
   sensor::RangeData accumulated_range_data_;
-
+  //标记该轨迹的开始时刻
   absl::optional<std::chrono::steady_clock::time_point> last_wall_time_;
   absl::optional<double> last_thread_cpu_time_seconds_;
   absl::optional<common::Time> last_sensor_time_;
-
+  //收集传感器数据
   RangeDataCollator range_data_collator_;
 };
 

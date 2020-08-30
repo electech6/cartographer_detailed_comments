@@ -51,20 +51,24 @@ class PrecomputationGridStack3D {
     return precomputation_grids_.at(depth);
   }
 
+  ///最大深度
   int max_depth() const { return precomputation_grids_.size() - 1; }
 
  private:
-  std::vector<PrecomputationGrid3D> precomputation_grids_;
+  std::vector<PrecomputationGrid3D> precomputation_grids_; ///每层深度的0-255地图
 };
 
 struct DiscreteScan3D;
 struct Candidate3D;
 
 // Used to compute scores between 0 and 1 how well the given pose matches.
-using MatchingFunction = std::function<float(const transform::Rigid3f&)>;
+using MatchingFunction = std::function<float(const transform::Rigid3f&)>; ///一个函数 输入是位姿变换 输出是float
 
+//快速3D匹配类
 class FastCorrelativeScanMatcher3D {
  public:
+
+    ///求解相对位姿变换
   struct Result {
     float score;
     transform::Rigid3d pose_estimate;
@@ -102,10 +106,12 @@ class FastCorrelativeScanMatcher3D {
 
  private:
   struct SearchParameters {
-    const int linear_xy_window_size;     // voxels
-    const int linear_z_window_size;      // voxels
-    const double angular_search_window;  // radians
-    const MatchingFunction* const low_resolution_matcher;
+    const int linear_xy_window_size;     /// voxels  线性搜索窗口 单方向
+    const int linear_z_window_size;      /// voxels
+    const double angular_search_window;  /// radians 角度搜索窗口 单方向
+
+    ///该函数: 使用位姿变换点云中的点 并对在低分辨率栅格地图下所有有概率的点求和 作为低分辨率匹配得分
+    const MatchingFunction* const low_resolution_matcher; ///低分辨率匹配器
   };
 
   std::unique_ptr<Result> MatchWithSearchParameters(
@@ -144,9 +150,9 @@ class FastCorrelativeScanMatcher3D {
 
   const proto::FastCorrelativeScanMatcherOptions3D options_;
   const float resolution_;
-  const int width_in_voxels_;
-  std::unique_ptr<PrecomputationGridStack3D> precomputation_grid_stack_;
-  const HybridGrid* const low_resolution_hybrid_grid_;
+  const int width_in_voxels_; ///一个维度的大小
+  std::unique_ptr<PrecomputationGridStack3D> precomputation_grid_stack_; ///各个深度0-255地图
+  const HybridGrid* const low_resolution_hybrid_grid_; ///低分辨率格栅地图
   RotationalScanMatcher rotational_scan_matcher_;
 };
 

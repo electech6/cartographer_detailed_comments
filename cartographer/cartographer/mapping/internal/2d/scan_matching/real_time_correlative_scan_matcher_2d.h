@@ -63,6 +63,14 @@ class RealTimeCorrelativeScanMatcher2D {
   // Aligns 'point_cloud' within the 'grid' given an
   // 'initial_pose_estimate' then updates 'pose_estimate' with the result and
   // returns the score.
+  /**
+   * @brief 正式进行匹配.
+   * @param[in] initial_pose_estimate 
+   * @param[in] point_cloud 
+   * @param[in] grid 
+   * @param[in] pose_estimate 
+   * @return double 
+   */
   double Match(const transform::Rigid2d& initial_pose_estimate,
                const sensor::PointCloud& point_cloud, const Grid2D& grid,
                transform::Rigid2d* pose_estimate) const;
@@ -72,12 +80,24 @@ class RealTimeCorrelativeScanMatcher2D {
   // from the Ceres CostFunctions: http://ceres-solver.org/modeling.html
   //
   // Visible for testing.
+  /**
+   * @brief 为每一个候选解进行打分.
+   * @param[in] grid 
+   * @param[in] discrete_scans 
+   * @param[in] search_parameters 
+   * @param[in] candidates 
+   */
   void ScoreCandidates(const Grid2D& grid,
                        const std::vector<DiscreteScan2D>& discrete_scans,
                        const SearchParameters& search_parameters,
                        std::vector<Candidate2D>* candidates) const;
 
  private:
+ /**
+  * @brief 生成所有的候选解.
+  * @param[in] search_parameters 
+  * @return std::vector<Candidate2D> 
+  */
   std::vector<Candidate2D> GenerateExhaustiveSearchCandidates(
       const SearchParameters& search_parameters) const;
 

@@ -39,14 +39,18 @@
 namespace cartographer {
 namespace mapping {
 namespace optimization {
-
+/**
+ * @brief 2D的节点空间刚体运动
+ */
 struct NodeSpec2D {
   common::Time time;
   transform::Rigid2d local_pose_2d;
   transform::Rigid2d global_pose_2d;
   Eigen::Quaterniond gravity_alignment;
 };
-
+/**
+ * @brief 2D的子图空间刚体运动
+ */
 struct SubmapSpec2D {
   transform::Rigid2d global_pose;
 };

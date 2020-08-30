@@ -61,6 +61,7 @@ Grid2D::Grid2D(const MapLimits& limits, float min_correspondence_cost,
                float max_correspondence_cost,
                ValueConversionTables* conversion_tables)
     : limits_(limits),
+    //根据 cells 的大小生成一维向量。
       correspondence_cost_cells_(
           limits_.cell_limits().num_x_cells * limits_.cell_limits().num_y_cells,
           kUnknownCorrespondenceValue),
@@ -71,7 +72,7 @@ Grid2D::Grid2D(const MapLimits& limits, float min_correspondence_cost,
           max_correspondence_cost)) {
   CHECK_LT(min_correspondence_cost_, max_correspondence_cost_);
 }
-
+//从 proto 流中恢复 Grid2D
 Grid2D::Grid2D(const proto::Grid2D& proto,
                ValueConversionTables* conversion_tables)
     : limits_(proto.limits()),
@@ -84,6 +85,7 @@ Grid2D::Grid2D(const proto::Grid2D& proto,
   CHECK_LT(min_correspondence_cost_, max_correspondence_cost_);
   if (proto.has_known_cells_box()) {
     const auto& box = proto.known_cells_box();
+    // ? Eigen::AlignedBox的用法
     known_cells_box_ =
         Eigen::AlignedBox2i(Eigen::Vector2i(box.min_x(), box.min_y()),
                             Eigen::Vector2i(box.max_x(), box.max_y()));
@@ -96,7 +98,9 @@ Grid2D::Grid2D(const proto::Grid2D& proto,
 }
 
 // Finishes the update sequence.
+// 停止更新
 void Grid2D::FinishUpdate() {
+  //如果索引值列表不为空
   while (!update_indices_.empty()) {
     DCHECK_GE(correspondence_cost_cells_[update_indices_.back()],
               kUpdateMarker);
@@ -107,6 +111,11 @@ void Grid2D::FinishUpdate() {
 
 // Fills in 'offset' and 'limits' to define a subregion of that contains all
 // known cells.
+/**
+ * @brief  填写'offset'和'limits'来定义包含all的子区域已知栅格
+ * @param[in] offset 
+ * @param[in] limits 
+ */
 void Grid2D::ComputeCroppedLimits(Eigen::Array2i* const offset,
                                   CellLimits* const limits) const {
   if (known_cells_box_.isEmpty()) {
@@ -122,6 +131,11 @@ void Grid2D::ComputeCroppedLimits(Eigen::Array2i* const offset,
 // Grows the map as necessary to include 'point'. This changes the meaning of
 // these coordinates going forward. This method must be called immediately
 // after 'FinishUpdate', before any calls to 'ApplyLookupTable'.
+/**
+ * @brief 增长子图
+ * @param[in] point 
+ */
+// ? 为什么在这继续封装一次
 void Grid2D::GrowLimits(const Eigen::Vector2f& point) {
   GrowLimits(point, {mutable_correspondence_cost_cells()},
              {kUnknownCorrespondenceValue});

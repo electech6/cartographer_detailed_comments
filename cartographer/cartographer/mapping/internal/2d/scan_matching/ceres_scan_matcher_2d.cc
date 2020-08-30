@@ -66,12 +66,16 @@ void CeresScanMatcher2D::Match(const Eigen::Vector2d& target_translation,
                                const Grid2D& grid,
                                transform::Rigid2d* const pose_estimate,
                                ceres::Solver::Summary* const summary) const {
+ //初始位姿
   double ceres_pose_estimate[3] = {initial_pose_estimate.translation().x(),
                                    initial_pose_estimate.translation().y(),
                                    initial_pose_estimate.rotation().angle()};
+  //地图匹配的cost，基于地图的误差函数                                
   ceres::Problem problem;
   CHECK_GT(options_.occupied_space_weight(), 0.);
+  //两种地图
   switch (grid.GetGridType()) {
+    //概率地图
     case GridType::PROBABILITY_GRID:
       problem.AddResidualBlock(
           CreateOccupiedSpaceCostFunction2D(
@@ -80,6 +84,7 @@ void CeresScanMatcher2D::Match(const Eigen::Vector2d& target_translation,
               point_cloud, grid),
           nullptr /* loss function */, ceres_pose_estimate);
       break;
+    //TSDF地图，能选TSDF地图就选TSDF地图，效果更好
     case GridType::TSDF:
       problem.AddResidualBlock(
           CreateTSDFMatchCostFunction2D(
@@ -89,19 +94,21 @@ void CeresScanMatcher2D::Match(const Eigen::Vector2d& target_translation,
           nullptr /* loss function */, ceres_pose_estimate);
       break;
   }
+  //平移的cost,相当于里程计权重
   CHECK_GT(options_.translation_weight(), 0.);
   problem.AddResidualBlock(
       TranslationDeltaCostFunctor2D::CreateAutoDiffCostFunction(
           options_.translation_weight(), target_translation),
       nullptr /* loss function */, ceres_pose_estimate);
+  //旋转的cost,相当于里程计权重
   CHECK_GT(options_.rotation_weight(), 0.);
   problem.AddResidualBlock(
       RotationDeltaCostFunctor2D::CreateAutoDiffCostFunction(
           options_.rotation_weight(), ceres_pose_estimate[2]),
       nullptr /* loss function */, ceres_pose_estimate);
-
+  //求解
   ceres::Solve(ceres_solver_options_, &problem, summary);
-
+  //返回结果
   *pose_estimate = transform::Rigid2d(
       {ceres_pose_estimate[0], ceres_pose_estimate[1]}, ceres_pose_estimate[2]);
 }

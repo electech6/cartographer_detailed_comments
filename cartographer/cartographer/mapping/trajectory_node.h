@@ -42,7 +42,11 @@ struct TrajectoryNodePose {
 };
 
 struct TrajectoryNode {
+  /**
+   * @brief 存储这个节点时的状态，包括时间、传感器数据等信息
+   */
   struct Data {
+    //当前帧的时间
     common::Time time;
 
     // Transform to approximately gravity align the tracking frame as
@@ -51,6 +55,7 @@ struct TrajectoryNode {
 
     // Used for loop closure in 2D: voxel filtered returns in the
     // 'gravity_alignment' frame.
+    // 经过水平投射后的点云数据，可用于 2D 情况下做 Loop Closure.
     sensor::PointCloud filtered_gravity_aligned_point_cloud;
 
     // Used for loop closure in 3D.
@@ -61,7 +66,7 @@ struct TrajectoryNode {
     // The node pose in the local SLAM frame.
     transform::Rigid3d local_pose;
   };
-
+  // 返回成员变量 constant_data 的时间
   common::Time time() const { return constant_data->time; }
 
   // This must be a shared_ptr. If the data is used for visualization while the
@@ -69,6 +74,7 @@ struct TrajectoryNode {
   std::shared_ptr<const Data> constant_data;
 
   // The node pose in the global SLAM frame.
+  //节点在世界坐标系下的位姿
   transform::Rigid3d global_pose;
 };
 

@@ -31,11 +31,17 @@ namespace scan_matching {
 // Computes a cost for matching the 'point_cloud' to the 'hybrid_grid' with a
 // 'translation' and 'rotation'. The cost increases when points fall into less
 // occupied space, i.e. at voxels with lower values.
+///计算将“点云”与具有“平移”和“旋转”的“混合网格”匹配的成本。当点落入占用较少的空间
+///（即在值较低的体素处）时，成本会增加
 class OccupiedSpaceCostFunction3D {
  public:
+    ///构造一个ceres::CostFuntion
+    ///尺度因子 点云 格栅地图
   static ceres::CostFunction* CreateAutoDiffCostFunction(
       const double scaling_factor, const sensor::PointCloud& point_cloud,
       const mapping::HybridGrid& hybrid_grid) {
+
+        ///具体使用的costfunction类 残差维度 顶点维度
     return new ceres::AutoDiffCostFunction<
         OccupiedSpaceCostFunction3D, ceres::DYNAMIC /* residuals */,
         3 /* translation variables */, 4 /* rotation variables */>(
@@ -66,9 +72,11 @@ class OccupiedSpaceCostFunction3D {
   OccupiedSpaceCostFunction3D& operator=(const OccupiedSpaceCostFunction3D&) =
       delete;
 
+  ///估计残差
   template <typename T>
   bool Evaluate(const transform::Rigid3<T>& transform,
                 T* const residual) const {
+      ///每一个点云
     for (size_t i = 0; i < point_cloud_.size(); ++i) {
       const Eigen::Matrix<T, 3, 1> world =
           transform * point_cloud_[i].position.cast<T>();
@@ -79,9 +87,9 @@ class OccupiedSpaceCostFunction3D {
     return true;
   }
 
-  const double scaling_factor_;
-  const sensor::PointCloud& point_cloud_;
-  const InterpolatedGrid interpolated_grid_;
+  const double scaling_factor_; ///尺度因子
+  const sensor::PointCloud& point_cloud_; ///点云
+  const InterpolatedGrid interpolated_grid_; ///格栅地图
 };
 
 }  // namespace scan_matching

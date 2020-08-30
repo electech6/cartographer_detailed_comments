@@ -54,18 +54,24 @@ void CastRays(const sensor::RangeData& range_data,
               const std::vector<uint16>& miss_table,
               const bool insert_free_space, ProbabilityGrid* probability_grid) {
   GrowAsNeeded(range_data, probability_grid);
-
+  //获取栅格地图的 limits
   const MapLimits& limits = probability_grid->limits();
+  //定义一个超分辨率像素，把当前的分辨率又划分成了 kSubpixelScale 份
   const double superscaled_resolution = limits.resolution() / kSubpixelScale;
+  //根据超分辨率像素又生成了一个新的 MapLimits
   const MapLimits superscaled_limits(
       superscaled_resolution, limits.max(),
       CellLimits(limits.cell_limits().num_x_cells * kSubpixelScale,
                  limits.cell_limits().num_y_cells * kSubpixelScale));
+   //根据 RangeData 原点的前两项，获取其对应的栅格化坐标。该坐标是我们所求的射线的原点。             
   const Eigen::Array2i begin =
       superscaled_limits.GetCellIndex(range_data.origin.head<2>());
   // Compute and add the end points.
+  // 定义一个向量集合，该集合存储 RangeData 中的 hits 的点。
   std::vector<Eigen::Array2i> ends;
+  // 这里就是根据 returns 集合的大小，给 ends 预分配一块存储区
   ends.reserve(range_data.returns.size());
+  // 遍历 returns 这个集合，把每个点先压入 ends 中，
   for (const sensor::RangefinderPoint& hit : range_data.returns) {
     ends.push_back(superscaled_limits.GetCellIndex(hit.position.head<2>()));
     probability_grid->ApplyLookupTable(ends.back() / kSubpixelScale, hit_table);
@@ -76,7 +82,9 @@ void CastRays(const sensor::RangeData& range_data,
   }
 
   // Now add the misses.
+  // 处理 origin 跟 hit 之间的射线中间的点
   for (const Eigen::Array2i& end : ends) {
+    // 同样处理 miss 集合中的点
     std::vector<Eigen::Array2i> ray =
         RayToPixelMask(begin, end, kSubpixelScale);
     for (const Eigen::Array2i& cell_index : ray) {
@@ -95,7 +103,7 @@ void CastRays(const sensor::RangeData& range_data,
   }
 }
 }  // namespace
-
+//设置hit_probability和miss_probability概率值
 proto::ProbabilityGridRangeDataInserterOptions2D
 CreateProbabilityGridRangeDataInserterOptions2D(
     common::LuaParameterDictionary* parameter_dictionary) {
@@ -123,10 +131,12 @@ ProbabilityGridRangeDataInserter2D::ProbabilityGridRangeDataInserter2D(
 
 void ProbabilityGridRangeDataInserter2D::Insert(
     const sensor::RangeData& range_data, GridInterface* const grid) const {
+  // 将 Grid 类型强制转化为 ProbabilityGrid 类型
   ProbabilityGrid* const probability_grid = static_cast<ProbabilityGrid*>(grid);
   CHECK(probability_grid != nullptr);
   // By not finishing the update after hits are inserted, we give hits priority
   // (i.e. no hits will be ignored because of a miss in the same cell).
+  //调用 CastRays 函数更新 Grid
   CastRays(range_data, hit_table_, miss_table_, options_.insert_free_space(),
            probability_grid);
   probability_grid->FinishUpdate();

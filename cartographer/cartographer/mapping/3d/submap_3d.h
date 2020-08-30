@@ -77,9 +77,9 @@ class Submap3D : public Submap {
  private:
   void UpdateFromProto(const proto::Submap3D& submap_3d);
 
-  std::unique_ptr<HybridGrid> high_resolution_hybrid_grid_;
-  std::unique_ptr<HybridGrid> low_resolution_hybrid_grid_;
-  Eigen::VectorXf rotational_scan_matcher_histogram_;
+  std::unique_ptr<HybridGrid> high_resolution_hybrid_grid_; ///该局部地图高分辨率栅格
+  std::unique_ptr<HybridGrid> low_resolution_hybrid_grid_; ///该局部地图低分辨率栅格
+  Eigen::VectorXf rotational_scan_matcher_histogram_; ///旋转直方图
 };
 
 // The first active submap will be created on the insertion of the first range
@@ -116,7 +116,7 @@ class ActiveSubmaps3D {
                  int rotational_scan_matcher_histogram_size);
 
   const proto::SubmapsOptions3D options_;
-  std::vector<std::shared_ptr<Submap3D>> submaps_;
+  std::vector<std::shared_ptr<Submap3D>> submaps_; ///局部地图列表
   RangeDataInserter3D range_data_inserter_;
 };
 

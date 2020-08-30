@@ -164,6 +164,7 @@ class PoseGraph2D : public PoseGraph {
       const EXCLUSIVE_LOCKS_REQUIRED(mutex_);
 
   // Handles a new work item.
+  //处理新的进程
   void AddWorkItem(const std::function<WorkItem::Result()>& work_item)
       LOCKS_EXCLUDED(mutex_) LOCKS_EXCLUDED(work_queue_mutex_);
 
@@ -237,14 +238,17 @@ class PoseGraph2D : public PoseGraph {
   // Updates the trajectory connectivity structure with a new constraint.
   void UpdateTrajectoryConnectivity(const Constraint& constraint)
       EXCLUSIVE_LOCKS_REQUIRED(mutex_);
-
+  //参数配置项
   const proto::PoseGraphOptions options_;
+  //全局优化回调函数
   GlobalSlamOptimizationCallback global_slam_optimization_callback_;
   mutable absl::Mutex mutex_;
+  //互斥锁
   absl::Mutex work_queue_mutex_;
 
   // If it exists, further work items must be added to this queue, and will be
   // considered later.
+  // 工作队列。将要进行的工作都加入到该队列中进行管理。
   std::unique_ptr<WorkQueue> work_queue_ GUARDED_BY(work_queue_mutex_);
 
   // We globally localize a fraction of the nodes from each trajectory.
@@ -252,16 +256,21 @@ class PoseGraph2D : public PoseGraph {
       global_localization_samplers_ GUARDED_BY(mutex_);
 
   // Number of nodes added since last loop closure.
+  // 标记上次 Loop Closure 之后又新添加了多少 Nodes
   int num_nodes_since_last_loop_closure_ GUARDED_BY(mutex_) = 0;
 
   // Current optimization problem.
+  // 当前优化问题
   std::unique_ptr<optimization::OptimizationProblem2D> optimization_problem_;
+  // 创建约束的 Builder
   constraints::ConstraintBuilder2D constraint_builder_;
 
   // Thread pool used for handling the work queue.
   common::ThreadPool* const thread_pool_;
 
   // List of all trimmers to consult when optimizations finish.
+  //优化完成后PoseGraphTrimmer类型容器
+  // ? trimmers概念是什么?
   std::vector<std::unique_ptr<PoseGraphTrimmer>> trimmers_ GUARDED_BY(mutex_);
 
   PoseGraphData data_ GUARDED_BY(mutex_);
@@ -270,6 +279,9 @@ class PoseGraph2D : public PoseGraph {
 
   // Allows querying and manipulating the pose graph by the 'trimmers_'. The
   // 'mutex_' of the pose graph is held while this class is used.
+  /**
+   * @brief 操作和查询位姿的类
+   */
   class TrimmingHandle : public Trimmable {
    public:
     TrimmingHandle(PoseGraph2D* parent);

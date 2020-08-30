@@ -30,6 +30,7 @@ namespace sensor {
 // was detected, and were inserted at a configured distance. It is assumed that
 // between the 'origin' and 'misses' is free space.
 struct RangeData {
+  //原点为三维向量
   Eigen::Vector3f origin;
   PointCloud returns;
   PointCloud misses;

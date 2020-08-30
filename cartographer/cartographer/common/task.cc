@@ -25,24 +25,34 @@ Task::~Task() {
     LOG(WARNING) << "Delete Task between dispatch and completion.";
   }
 }
-
+/**
+ * @brief state_=New
+ * @return Task::State 
+ */
 Task::State Task::GetState() {
   absl::MutexLock locker(&mutex_);
   return state_;
 }
-
+/**
+ * @brief State must be 'NEW'.
+ * @param[in] work_item 
+ */
 void Task::SetWorkItem(const WorkItem& work_item) {
   absl::MutexLock locker(&mutex_);
   CHECK_EQ(state_, NEW);
   work_item_ = work_item;
 }
-
+/**
+ * @brief 
+ * @param[in] dependency 
+ */
 void Task::AddDependency(std::weak_ptr<Task> dependency) {
   std::shared_ptr<Task> shared_dependency;
   {
     absl::MutexLock locker(&mutex_);
     CHECK_EQ(state_, NEW);
     if ((shared_dependency = dependency.lock())) {
+      // uncompleted_dependencies_自加1后为1
       ++uncompleted_dependencies_;
     }
   }
@@ -50,7 +60,10 @@ void Task::AddDependency(std::weak_ptr<Task> dependency) {
     shared_dependency->AddDependentTask(this);
   }
 }
-
+/**
+ * @brief 设置线程，状态必须为NEW，
+ * @param[in] thread_pool 
+ */
 void Task::SetThreadPool(ThreadPoolInterface* thread_pool) {
   absl::MutexLock locker(&mutex_);
   CHECK_EQ(state_, NEW);
@@ -83,7 +96,9 @@ void Task::OnDependenyCompleted() {
     thread_pool_to_notify_->NotifyDependenciesCompleted(this);
   }
 }
-
+/**
+ * @brief 线程的执行
+ */
 void Task::Execute() {
   {
     absl::MutexLock locker(&mutex_);

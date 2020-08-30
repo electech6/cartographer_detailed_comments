@@ -24,7 +24,11 @@
 
 namespace cartographer {
 namespace common {
-
+/**
+ * @brief 
+ * 成员函数  Add(float value)、ToString(int buckets)
+ * 成员变量  浮点型容器values_
+ */
 class Histogram {
  public:
   void Add(float value);

@@ -20,10 +20,15 @@ namespace cartographer {
 namespace mapping {
 namespace scan_matching {
 
+///底分辨率匹配器
+///输入: 低分辨率格栅地图 低分辨率点云
+///输出: 形参是pose的函数(使用位姿变换点云中的点 并对在低分辨率栅格地图下所有有概率的点求和 作为低分辨率匹配得分)
 std::function<float(const transform::Rigid3f&)> CreateLowResolutionMatcher(
     const HybridGrid* low_resolution_grid, const sensor::PointCloud* points) {
+    ///匿名函数 隐式安值捕获pose
   return [=](const transform::Rigid3f& pose) {
     float score = 0.f;
+    ///使用位姿变换点云中的点 并对在低分辨率栅格地图下所有有概率的点求和 作为低分辨率匹配得分
     for (const sensor::RangefinderPoint& point :
          sensor::TransformPointCloud(*points, pose)) {
       // TODO(zhengj, whess): Interpolate the Grid to get better score.

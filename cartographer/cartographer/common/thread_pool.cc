@@ -29,20 +29,33 @@
 
 namespace cartographer {
 namespace common {
-
+/**
+ * @brief 调用task类的执行函数
+ * @param[in] task 
+ */
 void ThreadPoolInterface::Execute(Task* task) { task->Execute(); }
-
+/**
+ * @brief 调用task的SetThreadPool函数
+ * @param[in] task 
+ */
 void ThreadPoolInterface::SetThreadPool(Task* task) {
   task->SetThreadPool(this);
 }
-
+/**
+ * @brief Construct a new Thread Pool:: Thread Pool object
+ *  线程初始化时，执行DoWork()函数
+ * @param[in] num_threads 
+ */
 ThreadPool::ThreadPool(int num_threads) {
   absl::MutexLock locker(&mutex_);
   for (int i = 0; i != num_threads; ++i) {
     pool_.emplace_back([this]() { ThreadPool::DoWork(); });
   }
 }
-
+/**
+ * @brief Destroy the Thread Pool:: Thread Pool object
+ * 当所有线程结束时才进行析构
+ */
 ThreadPool::~ThreadPool() {
   {
     absl::MutexLock locker(&mutex_);
@@ -53,7 +66,10 @@ ThreadPool::~ThreadPool() {
     thread.join();
   }
 }
-
+/**
+ * @brief 
+ * @param[in] task 
+ */
 void ThreadPool::NotifyDependenciesCompleted(Task* task) {
   absl::MutexLock locker(&mutex_);
   auto it = tasks_not_ready_.find(task);
@@ -61,7 +77,11 @@ void ThreadPool::NotifyDependenciesCompleted(Task* task) {
   task_queue_.push_back(it->second);
   tasks_not_ready_.erase(it);
 }
-
+/**
+ * @brief 
+ * @param[in] task 
+ * @return std::weak_ptr<Task> 
+ */
 std::weak_ptr<Task> ThreadPool::Schedule(std::unique_ptr<Task> task) {
   std::shared_ptr<Task> shared_task;
   {

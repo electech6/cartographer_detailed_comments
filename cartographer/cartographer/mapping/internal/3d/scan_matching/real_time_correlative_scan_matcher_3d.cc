@@ -31,16 +31,21 @@ RealTimeCorrelativeScanMatcher3D::RealTimeCorrelativeScanMatcher3D(
     const proto::RealTimeCorrelativeScanMatcherOptions& options)
     : options_(options) {}
 
+//初始位姿 点云 概率格栅地图 最优位姿估计(返回)
 float RealTimeCorrelativeScanMatcher3D::Match(
     const transform::Rigid3d& initial_pose_estimate,
     const sensor::PointCloud& point_cloud, const HybridGrid& hybrid_grid,
     transform::Rigid3d* pose_estimate) const {
   CHECK(pose_estimate != nullptr);
-  float best_score = -1.f;
+  float best_score = -1.f; //最优得分
+  //GenerateExhaustiveSearchTransforms 根据角度搜索窗和线性搜索窗 构造所有可能的位姿
+  //对于每一个可能的位姿
   for (const transform::Rigid3f& transform : GenerateExhaustiveSearchTransforms(
            hybrid_grid.resolution(), point_cloud)) {
     const transform::Rigid3f candidate =
-        initial_pose_estimate.cast<float>() * transform;
+        initial_pose_estimate.cast<float>() * transform; //每一个候选位姿的世界位姿
+    //根据候选位姿变换后的点云 计算这样变换后原格栅地图被占用的概率 取平均乘上负指数权重即为得分
+    //位姿和角度变换越大 得分越底
     const float score = ScoreCandidate(
         hybrid_grid, sensor::TransformPointCloud(point_cloud, candidate),
         transform);
@@ -52,28 +57,33 @@ float RealTimeCorrelativeScanMatcher3D::Match(
   return best_score;
 }
 
+//精度 点云
+//根据角度搜索窗和线性搜索窗 构造所有可能的位姿
 std::vector<transform::Rigid3f>
 RealTimeCorrelativeScanMatcher3D::GenerateExhaustiveSearchTransforms(
     const float resolution, const sensor::PointCloud& point_cloud) const {
-  std::vector<transform::Rigid3f> result;
+  std::vector<transform::Rigid3f> result; //位姿搜索列表
   const int linear_window_size =
-      common::RoundToInt(options_.linear_search_window() / resolution);
+      common::RoundToInt(options_.linear_search_window() / resolution); //线性窗口大小
   // We set this value to something on the order of resolution to make sure that
   // the std::acos() below is defined.
-  float max_scan_range = 3.f * resolution;
+  float max_scan_range = 3.f * resolution; //最大搜索范围
   for (const sensor::RangefinderPoint& point : point_cloud) {
     const float range = point.position.norm();
     max_scan_range = std::max(range, max_scan_range);
   }
   const float kSafetyMargin = 1.f - 1e-3f;
-  const float angular_step_size =
+  const float angular_step_size = //角度搜索步长
       kSafetyMargin * std::acos(1.f - common::Pow2(resolution) /
                                           (2.f * common::Pow2(max_scan_range)));
-  const int angular_window_size =
+  const int angular_window_size = //角度搜索次数
       common::RoundToInt(options_.angular_search_window() / angular_step_size);
+  //构造所有可能的位姿
+  //每一个平移位姿
   for (int z = -linear_window_size; z <= linear_window_size; ++z) {
     for (int y = -linear_window_size; y <= linear_window_size; ++y) {
       for (int x = -linear_window_size; x <= linear_window_size; ++x) {
+          //每一个角度旋转
         for (int rz = -angular_window_size; rz <= angular_window_size; ++rz) {
           for (int ry = -angular_window_size; ry <= angular_window_size; ++ry) {
             for (int rx = -angular_window_size; rx <= angular_window_size;
@@ -94,17 +104,23 @@ RealTimeCorrelativeScanMatcher3D::GenerateExhaustiveSearchTransforms(
   return result;
 }
 
+//格栅地图 世界当前候选点云 候选前后位姿变换
+//根据候选位姿变换后的点云 计算这样变换后原格栅地图被占用的概率 取平均乘上负指数权重即为得分
+//位姿和角度变换越大 得分越底
 float RealTimeCorrelativeScanMatcher3D::ScoreCandidate(
     const HybridGrid& hybrid_grid,
     const sensor::PointCloud& transformed_point_cloud,
     const transform::Rigid3f& transform) const {
-  float score = 0.f;
+  float score = 0.f; //得分
+  //候选点云中的每一个点 将改点在格栅地图中是否被占用的概率求平均
   for (const sensor::RangefinderPoint& point : transformed_point_cloud) {
+      // hybrid_grid.GetCellIndex(point.position) 将连续点云坐标 转化为离散格栅序号
     score +=
         hybrid_grid.GetProbability(hybrid_grid.GetCellIndex(point.position));
   }
-  score /= static_cast<float>(transformed_point_cloud.size());
+  score /= static_cast<float>(transformed_point_cloud.size()); //平均得分
   const float angle = transform::GetAngle(transform);
+  //概率权重 位姿和角度变换越大 得分越底
   score *=
       std::exp(-common::Pow2(transform.translation().norm() *
                                  options_.translation_delta_cost_weight() +

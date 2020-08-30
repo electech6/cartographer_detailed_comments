@@ -24,16 +24,24 @@ namespace cartographer {
 namespace mapping {
 namespace {
 
+///将中心到该点云的路径上的栅格设定空缺观测 更新路径上栅格的概率
+///局部地图坐标系下点云原点 局部地图坐标系下点云 格栅地图 靠近原点空闲区域大小
 void InsertMissesIntoGrid(const std::vector<uint16>& miss_table,
                           const Eigen::Vector3f& origin,
                           const sensor::PointCloud& returns,
                           HybridGrid* hybrid_grid,
                           const int num_free_space_voxels) {
-  const Eigen::Array3i origin_cell = hybrid_grid->GetCellIndex(origin);
-  for (const sensor::RangefinderPoint& hit : returns) {
-    const Eigen::Array3i hit_cell = hybrid_grid->GetCellIndex(hit.position);
 
-    const Eigen::Array3i delta = hit_cell - origin_cell;
+  const Eigen::Array3i origin_cell = hybrid_grid->GetCellIndex(origin); ///原点网格序号
+
+  ///每一个局部地图坐标系下点云的点 设定占据观测 更新该点的概率
+  for (const sensor::RangefinderPoint& hit : returns) {
+    const Eigen::Array3i hit_cell = hybrid_grid->GetCellIndex(hit.position); ///该点网格序号
+
+    const Eigen::Array3i delta = hit_cell - origin_cell; ///该点网格和原点网格序号差
+
+    ///(eigen).cwiseAbs() 逐元素计算平方
+    ///(eigen).maxCoeff() max(R(:)) 最大值
     const int num_samples = delta.cwiseAbs().maxCoeff();
     CHECK_LT(num_samples, 1 << 15);
     // 'num_samples' is the number of samples we equi-distantly place on the
@@ -42,6 +50,7 @@ void InsertMissesIntoGrid(const std::vector<uint16>& miss_table,
     // to the next on the fastest changing dimension.
     //
     // Only the last 'num_free_space_voxels' are updated for performance.
+    ///将该中心到该点云的路径上的栅格设定空缺观测 更新栅格概率
     for (int position = std::max(0, num_samples - num_free_space_voxels);
          position < num_samples; ++position) {
       const Eigen::Array3i miss_cell =
@@ -75,19 +84,25 @@ RangeDataInserter3D::RangeDataInserter3D(
       miss_table_(
           ComputeLookupTableToApplyOdds(Odds(options_.miss_probability()))) {}
 
+///将点云数据插入概率格栅地图
+///局部地图坐标系下点云 每一个点 设定占据观测 更新该网格的值 将中心到该点云的路径上的栅格设定空缺观测 更新路径上栅格的概率
+///局部地图坐标系下点云 格栅地图
 void RangeDataInserter3D::Insert(const sensor::RangeData& range_data,
                                  HybridGrid* hybrid_grid) const {
   CHECK(hybrid_grid != nullptr);
 
+  ///局部地图坐标系下点云 每一个点 设定占据观测 更新该网格的值
   for (const sensor::RangefinderPoint& hit : range_data.returns) {
-    const Eigen::Array3i hit_cell = hybrid_grid->GetCellIndex(hit.position);
+    const Eigen::Array3i hit_cell = hybrid_grid->GetCellIndex(hit.position); ///网格序号
     hybrid_grid->ApplyLookupTable(hit_cell, hit_table_);
   }
 
   // By not starting a new update after hits are inserted, we give hits priority
   // (i.e. no hits will be ignored because of a miss in the same cell).
+  ///将中心到该点云的路径上的栅格设定空缺观测 更新路径上栅格的概率
   InsertMissesIntoGrid(miss_table_, range_data.origin, range_data.returns,
                        hybrid_grid, options_.num_free_space_voxels());
+
   hybrid_grid->FinishUpdate();
 }
 

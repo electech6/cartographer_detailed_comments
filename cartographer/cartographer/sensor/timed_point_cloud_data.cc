@@ -21,7 +21,11 @@
 
 namespace cartographer {
 namespace sensor {
-
+/**
+ * @brief 谷歌特有的对数据进行处理的过程，这是将数据转换成处理后的数据
+ * @param[in] timed_point_cloud_data 
+ * @return proto::TimedPointCloudData 
+ */
 proto::TimedPointCloudData ToProto(
     const TimedPointCloudData& timed_point_cloud_data) {
   proto::TimedPointCloudData proto;
@@ -33,7 +37,11 @@ proto::TimedPointCloudData ToProto(
   }
   return proto;
 }
-
+/**
+ * @brief 对序列化的数据来反序列化，类似于调制与解调
+ * @param[in] proto 
+ * @return TimedPointCloudData 
+ */
 TimedPointCloudData FromProto(const proto::TimedPointCloudData& proto) {
   TimedPointCloud timed_point_cloud;
   if (proto.point_data().size() > 0) {
