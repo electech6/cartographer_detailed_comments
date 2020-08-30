@@ -49,10 +49,18 @@ namespace cartographer_ros {
 
 class MapBuilderBridge {
  public:
+    /**
+     * @brief TrajectoryState: includes LocalSlamData,tf of local_to_map
+     * @brief trajectory options
+     */
   struct LocalTrajectoryData {
     // Contains the trajectory data received from local SLAM, after
     // it had processed accumulated 'range_data_in_local' and estimated
     // current 'local_pose' at 'time'.
+            /**
+             * @brief LocalSlamData: includes time,local_pose,range_data_in_local
+             *                              即在submap坐标系下的时间,激光数据,位姿
+             */
     struct LocalSlamData {
       ::cartographer::common::Time time;
       ::cartographer::transform::Rigid3d local_pose;
@@ -63,7 +71,7 @@ class MapBuilderBridge {
     std::unique_ptr<cartographer::transform::Rigid3d> published_to_tracking;
     TrajectoryOptions trajectory_options;
   };
-
+  // 形参与Node一致
   MapBuilderBridge(
       const NodeOptions& node_options,
       std::unique_ptr<cartographer::mapping::MapBuilderInterface> map_builder,

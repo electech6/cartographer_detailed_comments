@@ -27,6 +27,7 @@
 #include "cartographer_ros_msgs/StatusResponse.h"
 
 namespace cartographer_ros {
+    // 可视化相关
 namespace {
 
 using ::cartographer::transform::Rigid3d;
@@ -96,7 +97,13 @@ void PushAndResetLineMarker(visualization_msgs::Marker* marker,
 }
 
 }  // namespace
-
+/**
+ * @brief 构造函数为空,仅创建了一个MapBuilderInterface的实例,其又是MapBuilder的接口
+ * @brief 因此创建MapBuilderBridge,就创建了MapBuilder
+ * @param node_options
+ * @param map_builder
+ * @param tf_buffer
+ */
 MapBuilderBridge::MapBuilderBridge(
     const NodeOptions& node_options,
     std::unique_ptr<cartographer::mapping::MapBuilderInterface> map_builder,
@@ -104,7 +111,11 @@ MapBuilderBridge::MapBuilderBridge(
     : node_options_(node_options),
       map_builder_(std::move(map_builder)),
       tf_buffer_(tf_buffer) {}
-
+    /**
+     * @brief 加载历史地图,调用map_builder的LoadState()函数
+     * @param state_filename
+     * @param load_frozen_state
+     */
 void MapBuilderBridge::LoadState(const std::string& state_filename,
                                  bool load_frozen_state) {
   // Check if suffix of the state file is ".pbstream".
@@ -118,7 +129,12 @@ void MapBuilderBridge::LoadState(const std::string& state_filename,
   cartographer::io::ProtoStreamReader stream(state_filename);
   map_builder_->LoadState(&stream, load_frozen_state);
 }
-
+/**
+ * @brief 添加轨迹,调用map_builder的AddTrajectoryBuilder()&GetTrajectoryBuilder()函数
+ * @param expected_sensor_ids
+ * @param trajectory_options
+ * @return
+ */
 int MapBuilderBridge::AddTrajectory(
     const std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>&
         expected_sensor_ids,
@@ -147,7 +163,10 @@ int MapBuilderBridge::AddTrajectory(
   CHECK(emplace_result.second == true);
   return trajectory_id;
 }
-
+/**
+ * @brief 结束轨迹,调用map_builder的FinishTrajectory()
+ * @param trajectory_id
+ */
 void MapBuilderBridge::FinishTrajectory(const int trajectory_id) {
   LOG(INFO) << "Finishing trajectory with ID '" << trajectory_id << "'...";
 
@@ -156,7 +175,10 @@ void MapBuilderBridge::FinishTrajectory(const int trajectory_id) {
   map_builder_->FinishTrajectory(trajectory_id);
   sensor_bridges_.erase(trajectory_id);
 }
-
+/**
+ * @brief 调用map_builder的pose_graph()的RunFinalOptimization()
+ * @brief 可以看到,调用关系一层套一层
+ */
 void MapBuilderBridge::RunFinalOptimization() {
   LOG(INFO) << "Running final trajectory optimization...";
   map_builder_->pose_graph()->RunFinalOptimization();
@@ -167,7 +189,11 @@ bool MapBuilderBridge::SerializeState(const std::string& filename,
   return map_builder_->SerializeStateToFile(include_unfinished_submaps,
                                             filename);
 }
-
+/**
+ * @brief 调用map_builder_的SubmapToProto()函数查询某个轨迹的某个子图,结果返回至response
+ * @param request
+ * @param response
+ */
 void MapBuilderBridge::HandleSubmapQuery(
     cartographer_ros_msgs::SubmapQuery::Request& request,
     cartographer_ros_msgs::SubmapQuery::Response& response) {
@@ -523,7 +549,13 @@ visualization_msgs::MarkerArray MapBuilderBridge::GetConstraintList() {
 SensorBridge* MapBuilderBridge::sensor_bridge(const int trajectory_id) {
   return sensor_bridges_.at(trajectory_id).get();
 }
-
+/**
+ * @brief 插入slam结果,包含submap,constraint,pose,range data等
+ * @param trajectory_id
+ * @param time
+ * @param local_pose
+ * @param range_data_in_local
+ */
 void MapBuilderBridge::OnLocalSlamResult(
     const int trajectory_id, const ::cartographer::common::Time time,
     const Rigid3d local_pose,

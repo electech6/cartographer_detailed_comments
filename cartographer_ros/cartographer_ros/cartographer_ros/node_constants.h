@@ -50,6 +50,7 @@ constexpr int kInfiniteSubscriberQueueSize = 0;
 constexpr int kLatestOnlyPublisherQueueSize = 1;
 
 // For multiple topics adds numbers to the topic name and returns the list.
+        ///±»»Ápoints2_1 points2_2
 std::vector<std::string> ComputeRepeatedTopicNames(const std::string& topic,
                                                    int num_topics);
 

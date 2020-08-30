@@ -42,6 +42,12 @@ TrajectoryOptions CreateTrajectoryOptions(
     ::cartographer::common::LuaParameterDictionary* const
         lua_parameter_dictionary) {
   TrajectoryOptions options;
+  /**
+   * @brief 调用CreateLocalTrajectoryBuilderOptions,该函数又
+   * @brief 调用CreateLocalTrajectoryBuilderOptions,作用是将
+   * @brief trajectory_builder_2d/3d中的设置赋值给TrajectoryOptions
+   * @brief lua_parameter_dictionary解析lua文件中的参数
+   */
   options.trajectory_builder_options =
       ::cartographer::mapping::CreateTrajectoryBuilderOptions(
           lua_parameter_dictionary->GetDictionary("trajectory_builder").get());

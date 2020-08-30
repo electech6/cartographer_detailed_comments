@@ -27,7 +27,13 @@ TfBridge::TfBridge(const std::string& tracking_frame,
     : tracking_frame_(tracking_frame),
       lookup_transform_timeout_sec_(lookup_transform_timeout_sec),
       buffer_(buffer) {}
-
+/**
+ * @brief 计算源frame到目标frame的坐标变换
+ * @param time current time for transform
+ * @param frame_id: source frame
+ * @param tracking_frame_: target frame
+ * @return tf
+ */
 std::unique_ptr<::cartographer::transform::Rigid3d> TfBridge::LookupToTracking(
     const ::cartographer::common::Time time,
     const std::string& frame_id) const {

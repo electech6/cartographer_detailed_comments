@@ -24,7 +24,10 @@
 #include "cartographer/mapping/proto/trajectory_builder_options.pb.h"
 
 namespace cartographer_ros {
-//轨迹选项的结构体
+/**
+ * @brief 传感器种类数量，各个frame对应的传感器frame_id
+ * @brief 这些变量在lua文件中赋值，通过proto传递
+ */
 struct TrajectoryOptions {
   ::cartographer::mapping::proto::TrajectoryBuilderOptions
       trajectory_builder_options;
@@ -47,6 +50,11 @@ struct TrajectoryOptions {
   double landmarks_sampling_ratio;
 };
 
+/**
+ * @brief 通过lua传递参数构建TrajectoryOptions，如果有初始轨迹位姿，则重载
+ * @param lua_parameter_dictionary /initial_trajectory_pose
+ * @return
+ */
 TrajectoryOptions CreateTrajectoryOptions(
     ::cartographer::common::LuaParameterDictionary* lua_parameter_dictionary);
 
